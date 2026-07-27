@@ -133,6 +133,30 @@ export const useJournal = defineStore("journal", () => {
     persistBook(book);
   }
 
+  /** Удалить книгу вместе с её записями дневника. */
+  function removeBook(id: string) {
+    books.value = books.value.filter((b) => b.id !== id);
+    entries.value = entries.value.filter((e) => e.bookId !== id);
+    db.books
+      .delete(id)
+      .catch((e) => console.error("Не удалось удалить книгу", e));
+    db.entries
+      .where("bookId")
+      .equals(id)
+      .delete()
+      .catch((e) => console.error("Не удалось удалить записи книги", e));
+  }
+
+  /** Очистить библиотеку полностью: все книги и все записи. */
+  function clearAll() {
+    books.value = [];
+    entries.value = [];
+    db.books.clear().catch((e) => console.error("Не удалось очистить книги", e));
+    db.entries
+      .clear()
+      .catch((e) => console.error("Не удалось очистить записи", e));
+  }
+
   return {
     // данные
     books,
@@ -151,6 +175,8 @@ export const useJournal = defineStore("journal", () => {
     addEntry,
     updateBook,
     setStatus,
+    removeBook,
+    clearAll,
     // жизненный цикл
     init,
   };

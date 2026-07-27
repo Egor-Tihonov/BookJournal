@@ -285,10 +285,11 @@ const submit = async () => {
                 </div>
             </div>
 
-            <div class="flabel">ПОЧЕМУ ДОБАВИЛ</div>
+            <div class="flabel">ПОЧЕМУ ДОБАВИЛ · ДО 250 СИМВОЛОВ</div>
             <textarea
                 placeholder="Пара слов на будущее — что зацепило, кто посоветовал…"
                 v-model="reason"
+                maxlength="250"
             ></textarea>
 
             <button

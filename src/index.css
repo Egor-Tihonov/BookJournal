@@ -240,6 +240,16 @@ a {
   cursor: default;
   transform: none;
 }
+.bj-btn.danger {
+  color: #8f3b2c;
+  border-color: rgba(143, 59, 44, 0.35);
+}
+.bj-btn.ghost.danger:hover {
+  background: rgba(143, 59, 44, 0.07);
+}
+.clear-lib {
+  margin-top: 14px;
+}
 .body {
   flex: 1;
   overflow-y: auto;
@@ -360,6 +370,7 @@ h1 {
   border: none;
   font-family: var(--sans);
   color: var(--ink);
+  position: relative;
 }
 .bookrow:hover {
   background: #f0e8d9;
@@ -400,6 +411,7 @@ h1 {
   text-align: left;
   font-family: var(--sans);
   color: var(--ink);
+  position: relative;
 }
 .tile .c {
   /* Cover — это span: без display block ширина/aspect-ratio не применятся */
@@ -432,6 +444,29 @@ h1 {
 }
 .tile.add b {
   color: var(--faint);
+}
+/* Подсказка «почему добавил» при наведении на книгу */
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: 210px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 400 12px/1.5 var(--sans);
+  padding: 10px 12px;
+  border-radius: 10px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s;
+  pointer-events: none;
+  z-index: 5;
+}
+.tile:hover .hint,
+.bookrow:hover .hint {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* ---- book card ---- */

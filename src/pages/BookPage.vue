@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import { useModals } from '../stores/modals'
 import Cover from '../components/Cover.vue'
@@ -10,6 +10,7 @@ import type { BookStatus } from '../types'
 import { countEntries, displayTitle, formatDate } from '../utils'
 
 const route = useRoute()
+const router = useRouter()
 const journal = useJournal()
 const modals = useModals()
 
@@ -39,6 +40,13 @@ const lastCompleted = computed(
 
 const onStatusChange = (s: BookStatus) => {
   if (book.value) journal.setStatus(book.value.id, s)
+}
+
+const removeBook = () => {
+  if (!book.value) return
+  if (!confirm(`Удалить «${book.value.title}» вместе с записями дневника?`)) return
+  journal.removeBook(book.value.id)
+  router.push('/library')
 }
 </script>
 
@@ -106,6 +114,10 @@ const onStatusChange = (s: BookStatus) => {
             @click="modals.openReview(book.id)"
           >
             Завершить книгу
+          </button>
+
+          <button class="bj-btn ghost danger" type="button" @click="removeBook">
+            Удалить книгу
           </button>
 
         </div>

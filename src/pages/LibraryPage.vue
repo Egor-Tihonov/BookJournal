@@ -5,7 +5,7 @@ import { useJournal } from '../stores/journal'
 import { STATUS_META, type Book } from '../types'
 import Cover from '../components/Cover.vue'
 import EmptyState from '../components/EmptyState.vue'
-import { countBooks, countEntries, detectLang, displayTitle, formatDate } from '../utils'
+import { countBooks, countEntries, detectLang, displayTitle, formatDate, truncate } from '../utils'
 
 const journal = useJournal()
 
@@ -40,6 +40,11 @@ const shelves = computed<{ title: string; books: Book[] }[]>(() => [
   { title: 'ХОЧУ ЧИТАТЬ', books: want.value },
   { title: 'ПРОЧИТАЛ', books: read.value },
 ])
+
+const clearAll = () => {
+  if (!confirm(`Удалить все книги (${journal.totalBooks}) вместе с записями? Это необратимо.`)) return
+  journal.clearAll()
+}
 </script>
 
 <template>
@@ -62,6 +67,10 @@ const shelves = computed<{ title: string; books: Book[] }[]>(() => [
     <div class="wrap">
       <div class="eyebrow">МОЯ БИБЛИОТЕКА</div>
       <h1>{{ countBooks(journal.totalBooks) }}, {{ countEntries(journal.totalEntries) }}</h1>
+
+      <button class="bj-btn ghost danger clear-lib" type="button" @click="clearAll">
+        Очистить библиотеку
+      </button>
 
       <EmptyState
         v-if="nothingFound"
@@ -103,6 +112,7 @@ const shelves = computed<{ title: string; books: Book[] }[]>(() => [
                 {{ journal.entriesForBook(b.id).length > 0 ? countEntries(journal.entriesForBook(b.id).length) : 'нет записей' }}
               </div>
             </div>
+            <span v-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
           </RouterLink>
         </div>
       </template>
@@ -117,6 +127,7 @@ const shelves = computed<{ title: string; books: Book[] }[]>(() => [
             <RouterLink v-for="b in shelf.books" :key="b.id" class="tile" :to="`/book/${b.id}`">
               <Cover :gradient="b.cover" />
               <b>{{ displayTitle(b) }}</b>
+              <span v-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
             </RouterLink>
             <RouterLink class="tile add" to="/add">
               <Cover>+</Cover>
