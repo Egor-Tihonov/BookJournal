@@ -2,8 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    # preparation-to-hosting — временно, для проверки деплоя до мержа; потом убрать
-    branches: [main, preparation-to-hosting]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -27,6 +26,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # SPA-фолбэк: Pages отдаёт 404.html на любой несуществующий путь —
+      # кладём туда копию приложения, чтобы F5 на внутренних маршрутах работал
+      - run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5
         with:
           # самонастройка Pages в режим «GitHub Actions», если ещё не включён
