@@ -28,6 +28,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v5
+        with:
+          # самонастройка Pages в режим «GitHub Actions», если ещё не включён
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
