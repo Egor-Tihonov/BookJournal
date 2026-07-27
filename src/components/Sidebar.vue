@@ -25,25 +25,43 @@ const feedActive = computed(() => route.path === '/feed' || route.path.startsWit
 
     <nav class="bj-nav">
       <RouterLink to="/library" :class="libraryActive ? 'on' : undefined">
-        <span
-          :style="{
-            width: '16px',
-            height: '16px',
-            border: '1.6px solid currentColor',
-            borderRadius: '2px 3px 3px 2px',
-          }"
-        />
+        <!-- книга -->
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
         Библиотека
       </RouterLink>
       <RouterLink to="/feed" :class="feedActive ? 'on' : undefined">
-        <span
-          :style="{
-            width: '16px',
-            height: '16px',
-            border: '1.6px solid currentColor',
-            borderRadius: '50%',
-          }"
-        />
+        <!-- лента записей -->
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="9" y1="6" x2="20" y2="6" />
+          <line x1="9" y1="12" x2="20" y2="12" />
+          <line x1="9" y1="18" x2="20" y2="18" />
+          <circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none" />
+          <circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none" />
+          <circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none" />
+        </svg>
         Лента дневника
       </RouterLink>
     </nav>
@@ -55,16 +73,6 @@ const feedActive = computed(() => route.path === '/feed' || route.path.startsWit
         {{ STATUS_META[status].label }}
       </span>
       <span class="n">{{ journal.booksByStatus(status).length }}</span>
-    </RouterLink>
-
-    <div class="grow" />
-    <RouterLink to="/settings" class="me">
-      <span class="ava">{{ journal.user ? journal.user.name.charAt(0) : '·' }}</span>
-      <span>
-        <b>{{ journal.user ? journal.user.name : 'Профиль' }}</b>
-        <small>{{ journal.user ? journal.user.email : 'Войти или создать' }}</small>
-      </span>
-      <span style="color: var(--faint)">›</span>
     </RouterLink>
   </aside>
 </template>

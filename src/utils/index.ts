@@ -1,3 +1,5 @@
+export { detectLang, translate } from "./language_perform";
+
 /** Русское склонение: plural(2, ['книга','книги','книг']) -> 'книги' */
 export function plural(n: number, forms: [string, string, string]): string {
   const mod10 = n % 10;
@@ -25,4 +27,9 @@ const dateFmt = new Intl.DateTimeFormat("ru-RU", {
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "" : dateFmt.format(d);
+}
+
+/** Название для отображения: «Оригинал (Перевод)», если у книги есть русский перевод. */
+export function displayTitle(book: { title: string; titleRu?: string }): string {
+  return book.titleRu ? `${book.title} (${book.titleRu})` : book.title;
 }

@@ -1,11 +1,12 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { db } from "../data/catalog";
+import { db } from "../data/db";
 import type { Book, BookStatus, DiaryEntry, EntryKind } from "../types";
 
 /** Данные для создания книги — без служебных полей (id/сессии их выставляет стор). */
 export interface NewBook {
   title: string;
+  titleRu?: string;
   author: string;
   year?: number;
   pages?: number;
@@ -32,6 +33,9 @@ export const useJournal = defineStore("journal", () => {
   const books = ref<Book[]>([]);
   const entries = ref<DiaryEntry[]>([]);
 
+  // Строка поиска по библиотеке: пишет TopBar, фильтр применяет LibraryPage.
+  const librarySearch = ref("");
+
   // --- Загрузка при старте (вызывается из main.ts до mount) ---
   async function init() {
     books.value = await db.books.toArray();
@@ -44,12 +48,15 @@ export const useJournal = defineStore("journal", () => {
 
   // --- Чтение (синхронно, из кэша) ---
   const getBook = (id: string) => books.value.find((b) => b.id === id);
+
   const booksByStatus = (status: BookStatus) =>
     books.value.filter((b) => b.status === status);
+
   const entriesForBook = (bookId: string) =>
     entries.value
       .filter((e) => e.bookId === bookId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
   const allEntries = () =>
     [...entries.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -68,6 +75,7 @@ export const useJournal = defineStore("journal", () => {
     const book: Book = {
       id: uid(),
       title: data.title.trim(),
+      titleRu: data.titleRu?.trim() || undefined,
       author: data.author.trim(),
       year: data.year,
       pages: data.pages,
@@ -131,6 +139,8 @@ export const useJournal = defineStore("journal", () => {
     entries,
     totalBooks,
     totalEntries,
+    // поиск по библиотеке
+    librarySearch,
     // чтение
     getBook,
     booksByStatus,

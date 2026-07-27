@@ -7,7 +7,7 @@ import Cover from '../components/Cover.vue'
 import StatusSelect from '../components/StatusSelect.vue'
 import EmptyState from '../components/EmptyState.vue'
 import type { BookStatus } from '../types'
-import { countEntries, formatDate } from '../utils'
+import { countEntries, displayTitle, formatDate } from '../utils'
 
 const route = useRoute()
 const journal = useJournal()
@@ -62,7 +62,7 @@ const onStatusChange = (s: BookStatus) => {
           <div class="head">
             <Cover :gradient="book.cover" />
             <div>
-              <h2>{{ book.title }}</h2>
+              <h2>{{ displayTitle(book) }}</h2>
               <div v-if="book.author" class="au">{{ book.author }}</div>
               <div v-if="yearLine" class="yr">{{ yearLine }}</div>
 
@@ -84,14 +84,6 @@ const onStatusChange = (s: BookStatus) => {
           <template v-if="ongoing || lastCompleted">
             <div class="sessions">
               <b>СЕССИИ ЧТЕНИЯ</b>
-              <button
-                v-if="ongoing"
-                class="link"
-                type="button"
-                @click="journal.setStatus(book.id, 'read')"
-              >
-                ● Завершить
-              </button>
             </div>
             <div class="scards">
               <div v-if="ongoing" class="scard live">
@@ -107,18 +99,15 @@ const onStatusChange = (s: BookStatus) => {
             </div>
           </template>
 
-          <!-- Записывать мысли можно только пока книга читается -->
           <button
-            v-if="book.status === 'reading'"
+            v-if="ongoing"
             class="bj-btn"
             type="button"
-            @click="modals.openNote(book.id)"
+            @click="modals.openReview(book.id)"
           >
-            + Записать мысль
+            Завершить книгу
           </button>
-          <button class="bj-btn ghost" type="button" @click="modals.openReview(book.id)">
-            Финальный отзыв
-          </button>
+
         </div>
 
         <div class="diary">
@@ -131,13 +120,24 @@ const onStatusChange = (s: BookStatus) => {
             icon="✎"
             title="Дневник пуст"
             text="Здесь будут ваши мысли и цитаты по этой книге — в хронологическом порядке."
-          />
+          >
+            <template #action>
+              <button
+                v-if="book.status === 'reading'"
+                class="bj-btn"
+                type="button"
+                @click="modals.openNote(book.id)"
+              >
+                + Записать мысль
+              </button>
+            </template>
+          </EmptyState>
           <div v-else class="timeline">
             <div v-for="e in entries" :key="e.id" :class="e.kind === 'quote' ? 'entry q' : 'entry'">
               <div class="h">
                 <span class="kind">{{ e.kind === 'quote' ? 'ЦИТАТА' : 'МЫСЛЬ' }}</span>
                 <span class="when">
-                  {{ (e.kind === 'quote' && e.page ? `стр. ${e.page} · ` : '') + formatDate(e.createdAt) }}
+                  {{ (e.page ? `стр. ${e.page} · ` : '') + formatDate(e.createdAt) }}
                 </span>
               </div>
               <p>{{ e.text }}</p>

@@ -27,6 +27,13 @@ const save = () => {
     review: text.value.trim() || undefined,
     rating: rating.value || undefined,
   })
+  journal.setStatus(book.value.id, 'read')
+  modals.closeReview()
+}
+
+const finishWithoutReview = () => {
+  if (!book.value) return
+  journal.setStatus(book.value.id, 'read')
   modals.closeReview()
 }
 
@@ -78,9 +85,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                   />
                 </div>
               </div>
-              <button class="bj-btn" type="button" :disabled="!book" @click="save">
-                Сохранить
-              </button>
+              <div style="display: flex; gap: 10px">
+                <button class="bj-btn ghost" type="button" :disabled="!book" @click="finishWithoutReview">
+                  Завершить без отзыва
+                </button>
+                <button class="bj-btn" type="button" :disabled="!book" @click="save">
+                  Сохранить
+                </button>
+              </div>
             </div>
           </div>
         </div>

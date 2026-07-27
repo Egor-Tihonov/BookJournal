@@ -7,9 +7,17 @@ interface CoverProps {
 
 const props = defineProps<CoverProps>();
 
-const bg = computed(() =>
-    props.gradient ? { background: props.gradient } : undefined,
-);
+// В gradient приходит либо CSS-градиент, либо картинка:
+// внешний URL или data-URL (обложка, скачанная в IndexedDB)
+const bg = computed(() => {
+    if (!props.gradient) return undefined;
+    const isImage = /^(https?:|data:)/.test(props.gradient);
+    return {
+        background: isImage
+            ? `url(${props.gradient}) center/cover no-repeat`
+            : props.gradient,
+    };
+});
 </script>
 
 <!-- Цветной корешок-обложка книги (`.cover .c`). Доп. class/style с места вызова

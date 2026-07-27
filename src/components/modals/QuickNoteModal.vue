@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useJournal } from '../../stores/journal'
 import { useModals } from '../../stores/modals'
 import type { EntryKind } from '../../types'
+import { displayTitle } from '../../utils'
 import Cover from '../Cover.vue'
 
 const modals = useModals()
@@ -49,7 +50,7 @@ const save = () => {
     bookId: book.value.id,
     kind: kind.value,
     text: text.value,
-    page: kind.value === 'quote' && page.value ? Number(page.value) : undefined,
+    page: page.value ? Number(page.value) : undefined,
   })
   modals.closeNote()
 }
@@ -97,7 +98,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                   >
                     <Cover :gradient="b.cover" />
                     <div>
-                      <b>{{ b.title }}</b>
+                      <b>{{ displayTitle(b) }}</b>
                       <small v-if="b.author">{{ b.author }}</small>
                     </div>
                   </button>
@@ -122,7 +123,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
             <template v-else>
               <div class="bk">
                 <Cover :gradient="book.cover" />
-                {{ book.title }}&nbsp;›
+                {{ displayTitle(book) }}&nbsp;›
               </div>
 
               <div class="seg" style="margin-bottom: 16px">
@@ -148,7 +149,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                     min="1"
                     v-model="page"
                     placeholder="—"
-                    :disabled="kind !== 'quote'"
                     style="width: 48px; border: none; background: transparent; color: inherit; font: inherit"
                   />
                 </label>

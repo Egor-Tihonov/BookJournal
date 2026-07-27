@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import EmptyState from '../components/EmptyState.vue'
-import { countEntries, formatDate } from '../utils'
+import { countEntries, displayTitle, formatDate } from '../utils'
 
 const journal = useJournal()
 const entries = computed(() => journal.allEntries())
@@ -32,7 +32,7 @@ const entries = computed(() => journal.allEntries())
             <span class="kind">{{ e.kind === 'quote' ? 'ЦИТАТА' : 'МЫСЛЬ' }}</span>
             <span class="when">
               <template v-if="journal.getBook(e.bookId)">
-                <RouterLink class="link" :to="`/book/${journal.getBook(e.bookId)!.id}`">{{ journal.getBook(e.bookId)!.title }}</RouterLink>{{ ' · ' }}
+                <RouterLink class="link" :to="`/book/${journal.getBook(e.bookId)!.id}`">{{ displayTitle(journal.getBook(e.bookId)!) }}</RouterLink>{{ ' · ' }}
               </template>
               {{ e.kind === 'quote' && e.page ? `стр. ${e.page} · ` : '' }}{{ formatDate(e.createdAt) }}
             </span>

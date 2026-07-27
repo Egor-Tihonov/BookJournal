@@ -5,7 +5,6 @@ import LibraryPage from "./pages/LibraryPage.vue";
 import FeedPage from "./pages/FeedPage.vue";
 import BookPage from "./pages/BookPage.vue";
 import AddBookPage from "./pages/AddBookPage.vue";
-import SettingsPage from "./pages/SettingsPage.vue";
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -20,7 +19,6 @@ export const router = createRouter({
         { path: "feed", component: FeedPage },
         { path: "book/:id", component: BookPage },
         { path: "add", component: AddBookPage },
-        { path: "settings", component: SettingsPage },
       ],
     },
     { path: "/:pathMatch(.*)*", redirect: "/" },

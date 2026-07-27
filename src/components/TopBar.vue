@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useJournal } from '../stores/journal'
 import { useModals } from '../stores/modals'
 
 const modals = useModals()
-const query = ref('')
+const journal = useJournal()
 </script>
 
 <template>
@@ -13,7 +13,7 @@ const query = ref('')
       class="search"
       type="search"
       placeholder="⌕  Поиск по библиотеке…"
-      v-model="query"
+      v-model="journal.librarySearch"
       aria-label="Поиск по библиотеке"
     />
     <div class="spacer" />

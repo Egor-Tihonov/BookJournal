@@ -10,6 +10,9 @@ export interface ReadingSession {
 export interface Book {
   id: string;
   title: string;
+  /** Русский перевод названия — заполняется, если книга искалась по-русски,
+      а в каталоге нашлась под английским названием. Показывается в скобках. */
+  titleRu?: string;
   author: string;
   year?: number;
   pages?: number;
