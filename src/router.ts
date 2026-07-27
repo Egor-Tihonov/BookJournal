@@ -7,7 +7,8 @@ import BookPage from "./pages/BookPage.vue";
 import AddBookPage from "./pages/AddBookPage.vue";
 
 export const router = createRouter({
-  history: createWebHistory(),
+  // база берётся из vite (base в vite.config.ts) — в деве "/", на Pages "/BookJournal/"
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     // «/» открывает текущую читаемую книгу (или библиотеку, если книг нет)
     { path: "/", component: HomeRedirect },
