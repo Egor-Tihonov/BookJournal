@@ -1,7 +1,14 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue"; // или ваш фреймворк, если это не Vue
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-})
+  build: {
+    target: "esnext", // Разрешает использование Top-level await при сборке
+  },
+  esbuild: {
+    supported: {
+      "top-level-await": true, // Явно указывает esbuild поддерживать эту фичу
+    },
+  },
+});
