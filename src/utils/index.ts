@@ -33,3 +33,9 @@ export function formatDate(iso: string): string {
 export function displayTitle(book: { title: string; titleRu?: string }): string {
   return book.titleRu ? `${book.title} (${book.titleRu})` : book.title;
 }
+
+/** Обрезка длинного текста для подсказок: «начало…». */
+export function truncate(text: string, max = 90): string {
+  const t = text.trim();
+  return t.length <= max ? t : t.slice(0, max).trimEnd() + "…";
+}
