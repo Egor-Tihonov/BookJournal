@@ -53,10 +53,15 @@ const memoryEntry = computed(() => {
   const dayIndex = Math.floor(Date.now() / 86_400_000)
   return pool[dayIndex % pool.length]
 })
+// Длинное воспоминание сворачиваем до нескольких строк; «Читать дальше» раскрывает.
+const memoryExpanded = ref(false)
+const memoryLong = computed(() => (memoryEntry.value?.text.length ?? 0) > 220)
+
 // Книга из напоминания может быть не в кэше (не входит ни в одно загруженное окно) — догружаем точечно.
 watch(
   memoryEntry,
   (e) => {
+    memoryExpanded.value = false
     if (e) journal.loadBooksByIds([e.bookId])
   },
   { immediate: true },
@@ -168,7 +173,7 @@ const onReadingScroll = () => {
             <span class="dot" :style="{ background: STATUS_META.reading.color }" />
             {{ memoryEntry.kind === 'quote' ? 'ОДНАЖДЫ ТЫ ВЫПИСАЛ ЦИТАТУ' : 'ОДНАЖДЫ ТЫ ЗАПИСАЛ МЫСЛЬ' }}
           </div>
-          <q>{{ memoryEntry.text }}</q>
+          <!-- Мета сверху: низ карточки — место действия («Читать дальше» / «Свернуть») -->
           <div class="meta">
             {{
               [displayTitle(recallBook), recallBook.author, timeAgo(memoryEntry.createdAt)]
@@ -176,6 +181,25 @@ const onReadingScroll = () => {
                 .join(' · ')
             }}
           </div>
+          <div class="txt" :class="{ collapsed: memoryLong && !memoryExpanded }">
+            <q>{{ memoryEntry.text }}</q>
+            <button
+              v-if="memoryLong && !memoryExpanded"
+              class="more"
+              type="button"
+              @click.stop.prevent="memoryExpanded = true"
+            >
+              Читать дальше
+            </button>
+          </div>
+          <button
+            v-if="memoryLong && memoryExpanded"
+            class="less"
+            type="button"
+            @click.stop.prevent="memoryExpanded = false"
+          >
+            Свернуть
+          </button>
         </div>
       </RouterLink>
 
