@@ -206,8 +206,8 @@ const clearAll = async () => {
             <div v-if="memoryEntry.kind === 'review' && memoryEntry.rating" class="recall-stars">
               <RatingStars :rating="memoryEntry.rating" />
             </div>
-            <q v-if="memoryEntry.kind !== 'review'">{{ memoryEntry.text }}</q>
-            <template v-else>{{ memoryEntry.text }}</template>
+            <!-- Кавычки у <q> отключены в CSS, так что впечатление выглядит так же, как цитата -->
+            <q>{{ memoryEntry.text }}</q>
             <button
               v-if="memoryLong && !memoryExpanded"
               class="more"

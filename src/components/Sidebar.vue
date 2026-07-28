@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import { STATUS_META, STATUS_ORDER } from '../types'
 import UserMenu from './UserMenu.vue'
+import ThemeToggle from './ThemeToggle.vue'
 
 const journal = useJournal()
 const route = useRoute()
@@ -77,6 +78,7 @@ const feedActive = computed(() => route.path === '/feed' || route.path.startsWit
     </RouterLink>
 
     <div class="grow" />
+    <ThemeToggle />
     <UserMenu variant="side" />
   </aside>
 </template>

@@ -153,10 +153,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 .drive-error {
   margin-top: 14px;
   font-size: 13px;
-  color: #8f3b2c;
+  color: var(--danger);
 }
 .sync-error {
-  color: #8f3b2c;
+  color: var(--danger);
 }
 .confirm-text {
   font-size: 14px;
