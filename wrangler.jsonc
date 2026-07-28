@@ -1,0 +1,11 @@
+{
+  // Конфиг Cloudflare Worker: раздаёт собранную статику из dist.
+  "name": "bookjournal",
+  "compatibility_date": "2026-07-28",
+  "assets": {
+    "directory": "./dist",
+    // Любой несуществующий путь получает index.html со статусом 200 —
+    // прямые ссылки на роуты SPA работают без 404-костыля.
+    "not_found_handling": "single-page-application"
+  }
+}
