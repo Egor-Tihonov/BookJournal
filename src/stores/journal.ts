@@ -23,6 +23,14 @@ export interface NewEntry {
   page?: number;
 }
 
+/** Формат файла резервной копии — используется стором drive.ts. */
+export interface BackupData {
+  version: number;
+  exportedAt: string;
+  books: Book[];
+  entries: DiaryEntry[];
+}
+
 const now = () => new Date().toISOString();
 const uid = () => crypto.randomUUID();
 
@@ -157,6 +165,40 @@ export const useJournal = defineStore("journal", () => {
       .catch((e) => console.error("Не удалось очистить записи", e));
   }
 
+  // --- Резервное копирование (используется стором drive.ts) ---
+
+  /** Снимок всех данных для выгрузки в бэкап. */
+  function exportData(): BackupData {
+    return {
+      version: 1,
+      exportedAt: now(),
+      books: snapshot(books.value),
+      entries: snapshot(entries.value),
+    };
+  }
+
+  /** Восстановить данные из бэкапа: заменяет книги и записи целиком, включая IndexedDB. */
+  async function importData(data: BackupData) {
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      !Array.isArray(data.books) ||
+      !Array.isArray(data.entries)
+    ) {
+      throw new Error("Файл бэкапа повреждён или имеет неверный формат");
+    }
+
+    await db.transaction("rw", db.books, db.entries, async () => {
+      await db.books.clear();
+      await db.entries.clear();
+      await db.books.bulkPut(data.books);
+      await db.entries.bulkPut(data.entries);
+    });
+
+    books.value = data.books;
+    entries.value = data.entries;
+  }
+
   return {
     // данные
     books,
@@ -177,6 +219,9 @@ export const useJournal = defineStore("journal", () => {
     setStatus,
     removeBook,
     clearAll,
+    // резервное копирование
+    exportData,
+    importData,
     // жизненный цикл
     init,
   };
