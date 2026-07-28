@@ -1,7 +1,8 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useJournal } from './journal'
-import { downloadBackup, findBackupFile, getAccessToken, uploadBackup } from '../services/googleDrive'
+import { getAccessToken } from '../services/googledrive/auth'
+import { downloadBackup, findBackupFile, uploadBackup } from '../services/googledrive/drive'
 
 const LAST_BACKUP_KEY = 'bj-drive-last-backup'
 
