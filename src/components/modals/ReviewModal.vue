@@ -75,7 +75,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                 <div class="flabel" style="margin: 0 0 9px">
                   ОЦЕНКА · ТОЛЬКО ДЛЯ ВАС
                 </div>
-                <div class="dots">
+                <div class="stars pick">
                   <i
                     v-for="n in [1, 2, 3, 4, 5]"
                     :key="n"
@@ -83,7 +83,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                     role="button"
                     :aria-label="`Оценка ${n}`"
                     @click="rating = n === rating ? 0 : n"
-                  />
+                  >★</i>
                 </div>
               </div>
               <div style="display: flex; gap: 10px">

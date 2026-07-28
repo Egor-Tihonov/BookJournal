@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import { useModals } from '../stores/modals'
 import Cover from '../components/Cover.vue'
+import RatingStars from '../components/RatingStars.vue'
 import StatusSelect from '../components/StatusSelect.vue'
 import EmptyState from '../components/EmptyState.vue'
 import type { BookStatus } from '../types'
@@ -107,7 +108,10 @@ const removeBook = async () => {
       <div class="book">
         <div class="left">
           <div class="head">
-            <Cover :gradient="book.cover" />
+            <div class="covcol">
+              <Cover :gradient="book.cover" />
+              <RatingStars v-if="book.status === 'read' && book.rating" :rating="book.rating" />
+            </div>
             <div>
               <h2>{{ displayTitle(book) }}</h2>
               <div v-if="book.author" class="au">{{ book.author }}</div>
