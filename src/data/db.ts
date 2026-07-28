@@ -1,9 +1,10 @@
 import Dexie, { type Table } from "dexie";
-import { Book, DiaryEntry } from "../types.ts";
+import { Book, DiaryEntry, Deletion } from "../types.ts";
 
 class MyBookShelf extends Dexie {
   books!: Table<Book, string>; // ручка как обращаться к таблице db.books.add(...), db.books.where(...)
   entries!: Table<DiaryEntry, string>;
+  deletions!: Table<Deletion, string>;
 
   constructor() {
     super("myBookShelf");
@@ -27,6 +28,31 @@ class MyBookShelf extends Dexie {
             if (!b.statusChangedAt) b.statusChangedAt = new Date().toISOString();
           }),
       );
+    // v3: добавлена таблица deletions (надгробия удаления) и поле updatedAt у книг/записей —
+    // нужны для слияния снимков при синхронизации с Google Drive.
+    this.version(3)
+      .stores({
+        books: "id, title, author, year, cover, status, statusChangedAt, [status+statusChangedAt]",
+        entries: "id, bookId, createdAt",
+        deletions: "id, deletedAt",
+      })
+      .upgrade((tx) => {
+        const now = new Date().toISOString();
+        return Promise.all([
+          tx
+            .table("books")
+            .toCollection()
+            .modify((b) => {
+              if (!b.updatedAt) b.updatedAt = b.statusChangedAt || now;
+            }),
+          tx
+            .table("entries")
+            .toCollection()
+            .modify((e) => {
+              if (!e.updatedAt) e.updatedAt = e.createdAt || now;
+            }),
+        ]);
+      });
   }
 }
 

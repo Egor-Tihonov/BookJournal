@@ -3,10 +3,20 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDrive } from '../../stores/drive'
 import { useJournal } from '../../stores/journal'
 import { useModals } from '../../stores/modals'
+import { useAuth } from '../../stores/auth'
+import { useSync } from '../../stores/sync'
 
 const modals = useModals()
 const journal = useJournal()
 const drive = useDrive()
+const auth = useAuth()
+const sync = useSync()
+
+// Кнопка возобновления синка после истёкшего токена: сначала входим, потом сразу гоним цикл синка.
+const onSignInAndSync = async () => {
+  await auth.signIn()
+  if (!auth.error) sync.syncNow('signin')
+}
 
 // formatDate из utils форматирует только дату — для бэкапа важно ещё и время сохранения.
 const lastBackupText = () => new Date(drive.lastBackupAt).toLocaleString('ru')
@@ -65,6 +75,40 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
               <template v-else>Ещё ни разу не сохранялось с этого устройства.</template>
             </div>
 
+            <!-- Статус автосинхронизации -->
+            <div class="sub" style="margin-top: -6px">
+              <template v-if="!auth.signedIn">Автосинхронизация выключена — войдите в Google</template>
+              <template v-else-if="sync.status === 'syncing'">Синхронизация…</template>
+              <template v-else-if="sync.status === 'needAuth'">Войдите, чтобы возобновить синхронизацию</template>
+              <span v-else-if="sync.status === 'error'" class="sync-error">{{ sync.error }}</span>
+              <template v-else-if="sync.status === 'synced'">
+                Синхронизировано: {{ new Date(sync.lastSyncAt).toLocaleString('ru') }}
+              </template>
+            </div>
+            <div
+              v-if="auth.signedIn && sync.pendingPush && sync.status !== 'syncing'"
+              class="sub"
+              style="margin-top: -6px"
+            >
+              Есть неотправленные изменения
+            </div>
+            <button
+              v-if="auth.signedIn && sync.status === 'needAuth'"
+              class="bj-btn"
+              type="button"
+              style="margin-top: 10px"
+              @click="onSignInAndSync"
+            >
+              Войти и синхронизировать
+            </button>
+            <div v-if="auth.signedIn" class="sub" style="margin-top: -6px">
+              {{
+                sync.storagePersisted
+                  ? 'Локальное хранилище защищено от очистки'
+                  : 'Браузер может очистить локальные данные — включена синхронизация'
+              }}
+            </div>
+
             <div
               v-if="!confirmingRestore"
               style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px"
@@ -117,6 +161,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 .drive-error {
   margin-top: 14px;
   font-size: 13px;
+  color: #8f3b2c;
+}
+.sync-error {
   color: #8f3b2c;
 }
 .confirm-text {

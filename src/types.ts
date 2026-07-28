@@ -29,6 +29,9 @@ export interface Book {
   rating?: number;
 
   sessions?: ReadingSession[];
+
+  /** ISO-дата последнего изменения любых полей — нужна для слияния при синхронизации. */
+  updatedAt: string;
 }
 
 export type EntryKind = "thought" | "quote";
@@ -42,6 +45,15 @@ export interface DiaryEntry {
   page?: number;
   /** ISO-дата создания */
   createdAt: string;
+  /** ISO-дата последнего изменения — нужна для слияния при синхронизации. */
+  updatedAt: string;
+}
+
+/** Событие удаления — «надгробие» для синхронизации между устройствами. */
+export interface Deletion {
+  id: string; // id удалённой сущности
+  type: "book" | "entry";
+  deletedAt: string; // ISO
 }
 
 export const STATUS_META: Record<BookStatus, { label: string; color: string }> =

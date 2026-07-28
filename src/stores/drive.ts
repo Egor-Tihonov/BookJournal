@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useJournal } from './journal'
 import { useAuth } from './auth'
+import { useSync } from './sync'
 import { downloadBackup, findBackupFile, uploadBackup } from '../services/googledrive/drive'
 
 const LAST_BACKUP_KEY = 'bj-drive-last-backup'
@@ -22,6 +23,9 @@ export const useDrive = defineStore('drive', () => {
       await uploadBackup(token, content)
       lastBackupAt.value = new Date().toISOString()
       localStorage.setItem(LAST_BACKUP_KEY, lastBackupAt.value)
+      // Файл на Drive только что перезаписан вручную — забываем его прошлый modifiedTime,
+      // чтобы следующий цикл автосинхронизации не принял его за уже виденный.
+      useSync().forgetRemote()
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось сохранить в Google Drive'
     } finally {
@@ -43,6 +47,9 @@ export const useDrive = defineStore('drive', () => {
       }
       const content = await downloadBackup(token, file.id)
       await journal.importData(JSON.parse(content))
+      // Данные только что заменены вручную из этого же файла — забываем modifiedTime,
+      // чтобы следующий цикл автосинхронизации перепроверил файл, а не счёл его уже виденным.
+      useSync().forgetRemote()
       return true
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось восстановить данные из Google Drive'

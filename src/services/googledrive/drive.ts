@@ -1,7 +1,7 @@
 // Работа с файлами Google Drive: бэкап хранится в скрытой папке приложения
 // (appDataFolder), недоступной пользователю напрямую. Получение токена — в auth.ts.
 
-export const BACKUP_FILE_NAME = "bookjournal-backup.json";
+import { BACKUP_FILE_NAME } from "../../config";
 
 interface DriveFile {
   id: string;

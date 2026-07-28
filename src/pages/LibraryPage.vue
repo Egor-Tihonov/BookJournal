@@ -7,15 +7,17 @@ import { STATUS_META, type Book, type BookStatus } from '../types'
 import { useShelf } from '../composables/useShelf'
 import Cover from '../components/Cover.vue'
 import EmptyState from '../components/EmptyState.vue'
+import CloudButton from '../components/CloudButton.vue'
+import { SHELF_PAGE_SIZE } from '../config'
 import { countBooks, countEntries, detectLang, displayTitle, formatDate, truncate } from '../utils'
 
 const journal = useJournal()
 const modals = useModals()
 
 // Полки грузятся постранично из IndexedDB, а не все книги разом.
-const readingShelf = useShelf('reading', 6)
-const wantShelf = useShelf('want', 6)
-const readShelf = useShelf('read', 6)
+const readingShelf = useShelf('reading', SHELF_PAGE_SIZE)
+const wantShelf = useShelf('want', SHELF_PAGE_SIZE)
+const readShelf = useShelf('read', SHELF_PAGE_SIZE)
 
 // Поиск: русский запрос ищет по title и titleRu, английский — только по title
 // Применяется к уже загруженному окну (полноценный поиск по всей библиотеке — отдельная задача).
@@ -64,7 +66,7 @@ const clearAll = async () => {
     'Удалить всё',
   )
   if (!ok) return
-  journal.clearAll()
+  await journal.clearAll()
 }
 
 // Карусель «ЧИТАЮ»: подгрузка следующей порции, когда долистали ленту почти до конца.
@@ -88,27 +90,7 @@ const onReadingScroll = () => {
       <div class="titlebar">
         <h1>Здесь будут ваши книги</h1>
         <div class="titlebar-actions">
-          <button
-            class="cloud-btn"
-            type="button"
-            title="Google Drive"
-            aria-label="Google Drive"
-            @click="modals.openDrive()"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-            </svg>
-          </button>
+          <CloudButton />
         </div>
       </div>
       <EmptyState
@@ -128,27 +110,7 @@ const onReadingScroll = () => {
       <div class="titlebar">
         <h1>{{ countBooks(journal.totalBooks) }}, {{ countEntries(journal.totalEntries) }}</h1>
         <div class="titlebar-actions">
-          <button
-            class="cloud-btn"
-            type="button"
-            title="Google Drive"
-            aria-label="Google Drive"
-            @click="modals.openDrive()"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-            </svg>
-          </button>
+          <CloudButton />
           <button
             class="trash-btn"
             type="button"
