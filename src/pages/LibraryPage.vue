@@ -6,6 +6,7 @@ import { useModals } from '../stores/modals'
 import { STATUS_META, type Book, type BookStatus } from '../types'
 import { useShelf } from '../composables/useShelf'
 import Cover from '../components/Cover.vue'
+import RatingStars from '../components/RatingStars.vue'
 import EmptyState from '../components/EmptyState.vue'
 import CloudButton from '../components/CloudButton.vue'
 import { SHELF_PAGE_SIZE } from '../config'
@@ -70,8 +71,9 @@ const recallBook = computed(() =>
   memoryEntry.value ? journal.getBook(memoryEntry.value.bookId) : undefined,
 )
 
-// Полки «ХОЧУ ЧИТАТЬ» / «ПРОЧИТАЛ»: первые 6 + ссылка «смотреть далее», если книг больше.
+// Полки: первые 6 + ссылка «смотреть далее», если книг больше. Все три секции — в одном виде.
 const shelves = computed(() => [
+  { title: 'ЧИТАЮ', status: 'reading' as BookStatus, shelf: readingShelf, filtered: reading.value },
   { title: 'ХОЧУ ЧИТАТЬ', status: 'want' as BookStatus, shelf: wantShelf, filtered: want.value },
   { title: 'ПРОЧИТАЛ', status: 'read' as BookStatus, shelf: readShelf, filtered: read.value },
 ])
@@ -83,19 +85,6 @@ const clearAll = async () => {
   )
   if (!ok) return
   await journal.clearAll()
-}
-
-// Карусель «ЧИТАЮ»: подгрузка следующей порции, когда долистали ленту почти до конца.
-const readingEl = ref<HTMLElement | null>(null)
-const onReadingScroll = () => {
-  const el = readingEl.value
-  if (!el) return
-  if (
-    el.scrollLeft + el.clientWidth >= el.scrollWidth - 200 &&
-    readingShelf.hasMore.value
-  ) {
-    readingShelf.loadMore()
-  }
 }
 </script>
 
@@ -203,26 +192,6 @@ const onReadingScroll = () => {
         </div>
       </RouterLink>
 
-      <template v-if="reading.length > 0">
-        <div class="sec">
-          <h2>ЧИТАЮ</h2>
-          <span>{{ readingShelf.total.value }}</span>
-        </div>
-        <div class="reading" ref="readingEl" @scroll.passive="onReadingScroll">
-          <RouterLink v-for="b in reading" :key="b.id" class="bookrow" :to="`/book/${b.id}`">
-            <Cover :gradient="b.cover" />
-            <div class="info">
-              <b>{{ displayTitle(b) }}</b>
-              <div v-if="b.author" class="au">{{ b.author }}</div>
-              <div class="st">
-                {{ journal.entriesForBook(b.id).length > 0 ? countEntries(journal.entriesForBook(b.id).length) : 'нет записей' }}
-              </div>
-            </div>
-            <span v-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
-          </RouterLink>
-        </div>
-      </template>
-
       <template v-for="entry in shelves" :key="entry.title">
         <template v-if="entry.filtered.length > 0">
           <div class="sec">
@@ -232,12 +201,13 @@ const onReadingScroll = () => {
           <div class="shelf">
             <RouterLink v-for="b in entry.filtered" :key="b.id" class="tile" :to="`/book/${b.id}`">
               <Cover :gradient="b.cover" />
+              <RatingStars v-if="entry.status === 'read' && b.rating" :rating="b.rating" />
               <b>{{ displayTitle(b) }}</b>
-              <span v-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
-            </RouterLink>
-            <RouterLink class="tile add" to="/add">
-              <Cover>+</Cover>
-              <b>добавить</b>
+              <!-- У читаемых книг вместо причины — счётчик записей дневника -->
+              <span v-if="entry.status === 'reading'" class="hint">
+                {{ journal.entriesForBook(b.id).length > 0 ? countEntries(journal.entriesForBook(b.id).length) : 'нет записей' }}
+              </span>
+              <span v-else-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
             </RouterLink>
           </div>
           <RouterLink

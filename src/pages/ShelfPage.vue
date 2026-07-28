@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { STATUS_META, type BookStatus } from '../types'
 import { useShelf } from '../composables/useShelf'
 import Cover from '../components/Cover.vue'
+import RatingStars from '../components/RatingStars.vue'
 import { SHELF_FULL_PAGE_SIZE } from '../config'
 import { displayTitle, truncate } from '../utils'
 
@@ -42,6 +43,7 @@ const loadMore = async () => {
       <div class="shelf">
         <RouterLink v-for="b in shelf.books.value" :key="b.id" class="tile" :to="`/book/${b.id}`">
           <Cover :gradient="b.cover" />
+          <RatingStars v-if="status === 'read' && b.rating" :rating="b.rating" />
           <b>{{ displayTitle(b) }}</b>
           <span v-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
         </RouterLink>
