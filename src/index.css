@@ -253,6 +253,14 @@ a {
 .bj-btn.ghost.danger:hover {
   background: rgba(143, 59, 44, 0.07);
 }
+/* Закрашенная светлая кнопка — второстепенное действие, но заметнее прозрачной */
+.bj-btn.soft {
+  background: #e7dfce;
+  color: var(--ink);
+}
+.bj-btn.soft:hover {
+  background: #ded4bf;
+}
 .titlebar {
   display: flex;
   align-items: center;
@@ -474,9 +482,44 @@ h1 {
   margin: 12px 0 14px;
   quotes: none;
 }
+/* Длинное воспоминание: свёрнуто до нескольких строк, поверх низа — прозрачная кнопка раскрытия */
+.recall .txt {
+  position: relative;
+}
+.recall .txt.collapsed {
+  max-height: 145px;
+  overflow: hidden;
+}
+.recall .more {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 48px 0 4px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  font: 500 13px var(--sans);
+  color: var(--accent);
+  background: linear-gradient(to bottom, rgba(251, 248, 241, 0), var(--card) 65%);
+}
+/* «Свернуть» выглядит и стоит так же, как «Читать дальше», — по центру внизу карточки */
+.recall .less {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 2px 0 4px;
+  margin: 0;
+  cursor: pointer;
+  text-align: center;
+  font: 500 13px var(--sans);
+  color: var(--accent);
+}
 .recall .meta {
   font-size: 13px;
   color: var(--faint);
+  margin-top: 6px;
 }
 
 /* «ЧИТАЮ» — горизонтальная карусель, карточки не сжимаются, подгрузка по сентинелу в конце ленты */
@@ -774,6 +817,17 @@ h1 {
 }
 .left .bj-btn.ghost {
   margin-top: 10px;
+}
+/* Ряд действий: «Завершить книгу» + «Записать» бок о бок */
+.left .actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+.left .actions .bj-btn {
+  margin-top: 0;
+  width: auto;
+  flex: 1;
 }
 
 .diary > .sec {

@@ -146,14 +146,26 @@ const removeBook = async () => {
             </div>
           </template>
 
-          <button
-            v-if="ongoing"
-            class="bj-btn"
-            type="button"
-            @click="modals.openReview(book.id)"
-          >
-            Завершить книгу
-          </button>
+          <!-- Действия по книге: завершить и записать мысль/цитату (доступна всегда, пока читаешь) -->
+          <div v-if="ongoing || book.status === 'reading'" class="actions">
+            <!-- «Записать» — основное действие (пользуются часто), «Завершить» — разовое -->
+            <button
+              v-if="ongoing"
+              class="bj-btn soft"
+              type="button"
+              @click="modals.openReview(book.id)"
+            >
+              Завершить книгу
+            </button>
+            <button
+              v-if="book.status === 'reading'"
+              class="bj-btn"
+              type="button"
+              @click="modals.openNote(book.id)"
+            >
+              ✎ Записать
+            </button>
+          </div>
 
         </div>
 

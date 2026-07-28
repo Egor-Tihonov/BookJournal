@@ -9,7 +9,7 @@ import Cover from '../components/Cover.vue'
 import EmptyState from '../components/EmptyState.vue'
 import CloudButton from '../components/CloudButton.vue'
 import { SHELF_PAGE_SIZE } from '../config'
-import { countBooks, countEntries, detectLang, displayTitle, formatDate, truncate } from '../utils'
+import { countBooks, countEntries, detectLang, displayTitle, timeAgo, truncate } from '../utils'
 
 const journal = useJournal()
 const modals = useModals()
@@ -41,17 +41,33 @@ const nothingFound = computed(
     reading.value.length + want.value.length + read.value.length === 0,
 )
 
-const latestQuote = computed(() => journal.allEntries().find((e) => e.kind === 'quote'))
-// Книга из последней цитаты может быть не в кэше (не входит ни в одно загруженное окно) — догружаем точечно.
+// Напоминание «однажды ты записал»: цитата или мысль из прошлого (старше недели).
+// Выбор стабилен в течение дня (индекс от номера дня) — воспоминание меняется раз в сутки,
+// а не при каждом обновлении страницы. Пока старых записей нет — показываем самую свежую.
+const memoryEntry = computed(() => {
+  const all = journal.allEntries()
+  if (all.length === 0) return undefined
+  const weekAgo = Date.now() - 7 * 86_400_000
+  const past = all.filter((e) => new Date(e.createdAt).getTime() < weekAgo)
+  const pool = past.length > 0 ? past : all
+  const dayIndex = Math.floor(Date.now() / 86_400_000)
+  return pool[dayIndex % pool.length]
+})
+// Длинное воспоминание сворачиваем до нескольких строк; «Читать дальше» раскрывает.
+const memoryExpanded = ref(false)
+const memoryLong = computed(() => (memoryEntry.value?.text.length ?? 0) > 220)
+
+// Книга из напоминания может быть не в кэше (не входит ни в одно загруженное окно) — догружаем точечно.
 watch(
-  latestQuote,
-  (q) => {
-    if (q) journal.loadBooksByIds([q.bookId])
+  memoryEntry,
+  (e) => {
+    memoryExpanded.value = false
+    if (e) journal.loadBooksByIds([e.bookId])
   },
   { immediate: true },
 )
 const recallBook = computed(() =>
-  latestQuote.value ? journal.getBook(latestQuote.value.bookId) : undefined,
+  memoryEntry.value ? journal.getBook(memoryEntry.value.bookId) : undefined,
 )
 
 // Полки «ХОЧУ ЧИТАТЬ» / «ПРОЧИТАЛ»: первые 6 + ссылка «смотреть далее», если книг больше.
@@ -147,7 +163,7 @@ const onReadingScroll = () => {
       />
 
       <RouterLink
-        v-if="!query && latestQuote && recallBook"
+        v-if="!query && memoryEntry && recallBook"
         class="recall"
         :to="`/book/${recallBook.id}`"
       >
@@ -155,12 +171,35 @@ const onReadingScroll = () => {
         <div>
           <div class="tag">
             <span class="dot" :style="{ background: STATUS_META.reading.color }" />
-            ОДНАЖДЫ ТЫ ЗАПИСАЛ
+            {{ memoryEntry.kind === 'quote' ? 'ОДНАЖДЫ ТЫ ВЫПИСАЛ ЦИТАТУ' : 'ОДНАЖДЫ ТЫ ЗАПИСАЛ МЫСЛЬ' }}
           </div>
-          <q>{{ latestQuote.text }}</q>
+          <!-- Мета сверху: низ карточки — место действия («Читать дальше» / «Свернуть») -->
           <div class="meta">
-            {{ displayTitle(recallBook) }} · {{ recallBook.author }} · {{ formatDate(latestQuote.createdAt) }}
+            {{
+              [displayTitle(recallBook), recallBook.author, timeAgo(memoryEntry.createdAt)]
+                .filter(Boolean)
+                .join(' · ')
+            }}
           </div>
+          <div class="txt" :class="{ collapsed: memoryLong && !memoryExpanded }">
+            <q>{{ memoryEntry.text }}</q>
+            <button
+              v-if="memoryLong && !memoryExpanded"
+              class="more"
+              type="button"
+              @click.stop.prevent="memoryExpanded = true"
+            >
+              Читать дальше
+            </button>
+          </div>
+          <button
+            v-if="memoryLong && memoryExpanded"
+            class="less"
+            type="button"
+            @click.stop.prevent="memoryExpanded = false"
+          >
+            Свернуть
+          </button>
         </div>
       </RouterLink>
 
