@@ -129,6 +129,15 @@ export const useJournal = defineStore("journal", () => {
   const allEntries = () =>
     [...entries.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  /** Прочитанные книги со впечатлением или оценкой — для блока-напоминания. */
+  async function loadReviewedBooks(): Promise<Book[]> {
+    const list = await db.books
+      .filter((b) => b.status === "read" && (!!b.review || !!b.rating))
+      .toArray();
+    cacheBooks(list);
+    return list;
+  }
+
   // --- Фоновая запись в IndexedDB (put = upsert по первичному ключу id) ---
   const persistBook = (book: Book) =>
     db.books
@@ -345,6 +354,7 @@ export const useJournal = defineStore("journal", () => {
     loadBooksByIds,
     entriesForBook,
     allEntries,
+    loadReviewedBooks,
     // запись
     addBook,
     addEntry,

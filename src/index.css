@@ -1321,6 +1321,13 @@ textarea {
   display: flex;
   margin-top: 7px;
 }
+/* Оценка в блоке-напоминании — над текстом впечатления */
+.recall-stars {
+  margin-bottom: 7px;
+}
+.recall-stars .stars i {
+  font-size: 15px;
+}
 /* Обложка на странице книги + звёздочки под ней */
 .covcol {
   display: flex;

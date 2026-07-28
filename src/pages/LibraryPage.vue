@@ -42,11 +42,35 @@ const nothingFound = computed(
     reading.value.length + want.value.length + read.value.length === 0,
 )
 
-// Напоминание «однажды ты записал»: цитата или мысль из прошлого (старше недели).
-// Выбор стабилен в течение дня (индекс от номера дня) — воспоминание меняется раз в сутки,
-// а не при каждом обновлении страницы. Пока старых записей нет — показываем самую свежую.
-const memoryEntry = computed(() => {
-  const all = journal.allEntries()
+// Напоминание «однажды ты…»: цитата, мысль или впечатление о прочитанной книге из прошлого
+// (старше недели). Выбор стабилен в течение дня (индекс от номера дня) — воспоминание меняется
+// раз в сутки, а не при каждом обновлении страницы. Пока старых нет — показываем самое свежее.
+interface RecallItem {
+  kind: 'quote' | 'thought' | 'review'
+  text: string
+  createdAt: string
+  bookId: string
+  rating?: number
+}
+
+// Книги с отзывом/оценкой лежат в IndexedDB не целиком в памяти — догружаем при открытии.
+const reviewedBooks = ref<Book[]>([])
+journal.loadReviewedBooks().then((list) => (reviewedBooks.value = list))
+
+const memoryEntry = computed<RecallItem | undefined>(() => {
+  const entryItems: RecallItem[] = journal
+    .allEntries()
+    .map((e) => ({ kind: e.kind, text: e.text, createdAt: e.createdAt, bookId: e.bookId }))
+  const reviewItems: RecallItem[] = reviewedBooks.value.map((b) => ({
+    kind: 'review',
+    text: b.review ?? '',
+    createdAt: b.statusChangedAt,
+    bookId: b.id,
+    rating: b.rating,
+  }))
+  const all = [...entryItems, ...reviewItems].sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt),
+  )
   if (all.length === 0) return undefined
   const weekAgo = Date.now() - 7 * 86_400_000
   const past = all.filter((e) => new Date(e.createdAt).getTime() < weekAgo)
@@ -160,7 +184,13 @@ const clearAll = async () => {
         <div>
           <div class="tag">
             <span class="dot" :style="{ background: STATUS_META.reading.color }" />
-            {{ memoryEntry.kind === 'quote' ? 'ОДНАЖДЫ ТЫ ВЫПИСАЛ ЦИТАТУ' : 'ОДНАЖДЫ ТЫ ЗАПИСАЛ МЫСЛЬ' }}
+            {{
+              memoryEntry.kind === 'quote'
+                ? 'ОДНАЖДЫ ТЫ ВЫПИСАЛ ЦИТАТУ'
+                : memoryEntry.kind === 'thought'
+                  ? 'ОДНАЖДЫ ТЫ ЗАПИСАЛ МЫСЛЬ'
+                  : 'ОДНАЖДЫ ТЫ ПРОЧИТАЛ ЭТУ КНИГУ'
+            }}
           </div>
           <!-- Мета сверху: низ карточки — место действия («Читать дальше» / «Свернуть») -->
           <div class="meta">
@@ -171,7 +201,12 @@ const clearAll = async () => {
             }}
           </div>
           <div class="txt" :class="{ collapsed: memoryLong && !memoryExpanded }">
-            <q>{{ memoryEntry.text }}</q>
+            <!-- У впечатления — оценка звёздами; текст без кавычек (это не цитата) -->
+            <div v-if="memoryEntry.kind === 'review' && memoryEntry.rating" class="recall-stars">
+              <RatingStars :rating="memoryEntry.rating" />
+            </div>
+            <q v-if="memoryEntry.kind !== 'review'">{{ memoryEntry.text }}</q>
+            <template v-else>{{ memoryEntry.text }}</template>
             <button
               v-if="memoryLong && !memoryExpanded"
               class="more"
