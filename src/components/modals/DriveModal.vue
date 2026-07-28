@@ -18,9 +18,6 @@ const onSignInAndSync = async () => {
   if (!auth.error) sync.syncNow('signin')
 }
 
-// formatDate из utils форматирует только дату — для бэкапа важно ещё и время сохранения.
-const lastBackupText = () => new Date(drive.lastBackupAt).toLocaleString('ru')
-
 // Подтверждение восстановления — встроенный шаг вместо системного confirm().
 const confirmingRestore = ref(false)
 
@@ -70,13 +67,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
               Резервная копия библиотеки хранится в скрытой папке приложения на вашем Google Диске.
             </div>
 
-            <div class="sub" style="margin-top: -10px">
-              <template v-if="drive.lastBackupAt">Последнее сохранение: {{ lastBackupText() }}</template>
-              <template v-else>Ещё ни разу не сохранялось с этого устройства.</template>
-            </div>
-
             <!-- Статус автосинхронизации -->
-            <div class="sub" style="margin-top: -6px">
+            <div class="sub" style="margin-top: -10px">
               <template v-if="!auth.signedIn">Автосинхронизация выключена — войдите в Google</template>
               <template v-else-if="sync.status === 'syncing'">Синхронизация…</template>
               <template v-else-if="sync.status === 'needAuth'">Войдите, чтобы возобновить синхронизацию</template>
@@ -109,25 +101,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
               }}
             </div>
 
+            <!-- Отправка в Drive полностью автоматическая; вручную осталось только восстановление -->
             <div
               v-if="!confirmingRestore"
               style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px"
             >
               <button
-                class="bj-btn"
-                type="button"
-                :disabled="drive.busy !== 'idle'"
-                @click="drive.backup()"
-              >
-                {{ drive.busy === 'saving' ? 'Сохраняю…' : 'Сохранить в Drive' }}
-              </button>
-              <button
                 class="bj-btn ghost"
                 type="button"
-                :disabled="drive.busy !== 'idle'"
+                :disabled="drive.busy"
                 @click="confirmingRestore = true"
               >
-                {{ drive.busy === 'restoring' ? 'Восстанавливаю…' : 'Восстановить из Drive' }}
+                {{ drive.busy ? 'Восстанавливаю…' : 'Восстановить из Drive' }}
               </button>
             </div>
 
