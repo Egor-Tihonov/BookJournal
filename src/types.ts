@@ -19,6 +19,8 @@ export interface Book {
 
   cover?: string;
   status: BookStatus;
+  /** ISO-дата, когда книга попала в текущий статус — нужно для сортировки полки «свежие сверху». */
+  statusChangedAt: string;
 
   reason?: string;
 

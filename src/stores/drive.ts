@@ -18,7 +18,7 @@ export const useDrive = defineStore('drive', () => {
     try {
       const journal = useJournal()
       const token = await useAuth().getToken()
-      const content = JSON.stringify(journal.exportData())
+      const content = JSON.stringify(await journal.exportData())
       await uploadBackup(token, content)
       lastBackupAt.value = new Date().toISOString()
       localStorage.setItem(LAST_BACKUP_KEY, lastBackupAt.value)

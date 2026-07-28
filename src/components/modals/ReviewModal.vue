@@ -11,13 +11,14 @@ const book = computed(() => (modals.reviewBookId ? journal.getBook(modals.review
 const text = ref('')
 const rating = ref(0)
 
+// Книга может быть не в кэше (открыли отзыв не заходя на страницу книги) — догружаем при открытии.
 watch(
-  () => [modals.reviewOpen, book.value] as const,
-  ([open]) => {
-    if (open) {
-      text.value = book.value?.review ?? ''
-      rating.value = book.value?.rating ?? 0
-    }
+  () => [modals.reviewOpen, modals.reviewBookId] as const,
+  async ([open, id]) => {
+    if (!open) return
+    if (id) await journal.loadBook(id)
+    text.value = book.value?.review ?? ''
+    rating.value = book.value?.rating ?? 0
   },
 )
 

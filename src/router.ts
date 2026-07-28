@@ -5,6 +5,7 @@ import LibraryPage from "./pages/LibraryPage.vue";
 import FeedPage from "./pages/FeedPage.vue";
 import BookPage from "./pages/BookPage.vue";
 import AddBookPage from "./pages/AddBookPage.vue";
+import ShelfPage from "./pages/ShelfPage.vue";
 
 export const router = createRouter({
   // база берётся из vite (base в vite.config.ts) — в деве "/", на Pages "/BookJournal/"
@@ -17,6 +18,7 @@ export const router = createRouter({
       component: Layout,
       children: [
         { path: "library", component: LibraryPage },
+        { path: "library/shelf/:status", component: ShelfPage },
         { path: "feed", component: FeedPage },
         { path: "book/:id", component: BookPage },
         { path: "add", component: AddBookPage },

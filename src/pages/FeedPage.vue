@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import EmptyState from '../components/EmptyState.vue'
@@ -7,6 +7,13 @@ import { countEntries, displayTitle, formatDate } from '../utils'
 
 const journal = useJournal()
 const entries = computed(() => journal.allEntries())
+
+// Названия книг у записей рисуются из кэша — догружаем книги записей, которых там ещё нет.
+const loadEntryBooks = () =>
+  journal.loadBooksByIds([...new Set(entries.value.map((e) => e.bookId))])
+
+onMounted(loadEntryBooks)
+watch(() => journal.totalEntries, loadEntryBooks)
 </script>
 
 <template>

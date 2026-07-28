@@ -1,5 +1,6 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
+import Dexie from "dexie";
 import { db } from "../data/db";
 import type { Book, BookStatus, DiaryEntry, EntryKind } from "../types";
 
@@ -38,7 +39,14 @@ const uid = () => crypto.randomUUID();
 const snapshot = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
 export const useJournal = defineStore("journal", () => {
-  const books = ref<Book[]>([]);
+  // Кэш ТОЛЬКО тех книг, что реально понадобились экрану (полка/страница книги и т.п.).
+  // Полный список книг в память больше не грузим — из БД читаем страницами (см. useShelf).
+  const booksById = ref<Record<string, Book>>({});
+  // Счётчики книг по статусам — считаются в БД, не требуют загрузки самих книг.
+  const counts = ref<Record<BookStatus, number>>({ want: 0, reading: 0, read: 0 });
+  // Инкрементится при любой мутации книг — по нему списки на страницах перезагружают своё окно.
+  const booksVersion = ref(0);
+
   const entries = ref<DiaryEntry[]>([]);
 
   // Строка поиска по библиотеке: пишет TopBar, фильтр применяет LibraryPage.
@@ -46,19 +54,68 @@ export const useJournal = defineStore("journal", () => {
 
   // --- Загрузка при старте (вызывается из main.ts до mount) ---
   async function init() {
-    books.value = await db.books.toArray();
     entries.value = await db.entries.toArray();
+    await refreshCounts();
+  }
+
+  /** Пересчитать счётчики книг по статусам (без загрузки самих книг). */
+  async function refreshCounts() {
+    const [want, reading, read] = await Promise.all([
+      db.books.where("status").equals("want").count(),
+      db.books.where("status").equals("reading").count(),
+      db.books.where("status").equals("read").count(),
+    ]);
+    counts.value = { want, reading, read };
   }
 
   // --- Счётчики ---
-  const totalBooks = computed(() => books.value.length);
+  const totalBooks = computed(
+    () => counts.value.want + counts.value.reading + counts.value.read,
+  );
   const totalEntries = computed(() => entries.value.length);
 
   // --- Чтение (синхронно, из кэша) ---
-  const getBook = (id: string) => books.value.find((b) => b.id === id);
+  const getBook = (id: string) => booksById.value[id];
 
-  const booksByStatus = (status: BookStatus) =>
-    books.value.filter((b) => b.status === status);
+  /** Положить книги в кэш (не мутирует счётчики/версию — только чтение). */
+  function cacheBooks(list: Book[]) {
+    for (const b of list) booksById.value[b.id] = b;
+  }
+
+  /**
+   * Загрузить страницу книг статуса, свежие сверху (по statusChangedAt).
+   * Результат кэшируется и возвращается.
+   */
+  async function fetchShelf(
+    status: BookStatus,
+    offset: number,
+    limit: number,
+  ): Promise<Book[]> {
+    const list = await db.books
+      .where("[status+statusChangedAt]")
+      .between([status, Dexie.minKey], [status, Dexie.maxKey])
+      .reverse()
+      .offset(offset)
+      .limit(limit)
+      .toArray();
+    cacheBooks(list);
+    return list;
+  }
+
+  /** Загрузить одну книгу по id, если её ещё нет в кэше. */
+  async function loadBook(id: string) {
+    if (booksById.value[id]) return;
+    const book = await db.books.get(id);
+    if (book) cacheBooks([book]);
+  }
+
+  /** Догрузить в кэш книги по списку id, которых там ещё нет. */
+  async function loadBooksByIds(ids: string[]) {
+    const missing = ids.filter((id) => !booksById.value[id]);
+    if (missing.length === 0) return;
+    const list = await db.books.bulkGet(missing);
+    cacheBooks(list.filter((b): b is Book => !!b));
+  }
 
   const entriesForBook = (bookId: string) =>
     entries.value
@@ -89,12 +146,15 @@ export const useJournal = defineStore("journal", () => {
       pages: data.pages,
       cover: data.cover,
       status: data.status,
+      statusChangedAt: now(),
       reason: data.reason?.trim() || undefined,
       // если книга добавлена сразу в статусе «Читаю» — открываем первую сессию
       sessions:
         data.status === "reading" ? [{ id: uid(), startedAt: now() }] : [],
     };
-    books.value.push(book);
+    booksById.value[book.id] = book;
+    counts.value[book.status]++;
+    booksVersion.value++;
     persistBook(book);
     return book;
   }
@@ -119,6 +179,7 @@ export const useJournal = defineStore("journal", () => {
     const book = getBook(id);
     if (!book) return;
     Object.assign(book, patch);
+    booksVersion.value++;
     persistBook(book);
   }
 
@@ -136,14 +197,24 @@ export const useJournal = defineStore("journal", () => {
       const ongoing = sessions.find((s) => !s.endedAt);
       if (ongoing) ongoing.endedAt = now();
     }
+    const prevStatus = book.status;
     book.sessions = sessions;
     book.status = status;
+    book.statusChangedAt = now();
+    counts.value[prevStatus]--;
+    counts.value[status]++;
+    booksVersion.value++;
     persistBook(book);
   }
 
   /** Удалить книгу вместе с её записями дневника. */
   function removeBook(id: string) {
-    books.value = books.value.filter((b) => b.id !== id);
+    const book = booksById.value[id];
+    if (book) {
+      counts.value[book.status]--;
+      delete booksById.value[id];
+      booksVersion.value++;
+    }
     entries.value = entries.value.filter((e) => e.bookId !== id);
     db.books
       .delete(id)
@@ -157,7 +228,9 @@ export const useJournal = defineStore("journal", () => {
 
   /** Очистить библиотеку полностью: все книги и все записи. */
   function clearAll() {
-    books.value = [];
+    booksById.value = {};
+    counts.value = { want: 0, reading: 0, read: 0 };
+    booksVersion.value++;
     entries.value = [];
     db.books.clear().catch((e) => console.error("Не удалось очистить книги", e));
     db.entries
@@ -167,12 +240,12 @@ export const useJournal = defineStore("journal", () => {
 
   // --- Резервное копирование (используется стором drive.ts) ---
 
-  /** Снимок всех данных для выгрузки в бэкап. */
-  function exportData(): BackupData {
+  /** Снимок всех данных для выгрузки в бэкап (книги читаются из БД целиком). */
+  async function exportData(): Promise<BackupData> {
     return {
       version: 1,
       exportedAt: now(),
-      books: snapshot(books.value),
+      books: await db.books.toArray(),
       entries: snapshot(entries.value),
     };
   }
@@ -188,28 +261,38 @@ export const useJournal = defineStore("journal", () => {
       throw new Error("Файл бэкапа повреждён или имеет неверный формат");
     }
 
+    const books = data.books.map((b) => ({
+      ...b,
+      statusChangedAt: b.statusChangedAt || now(),
+    }));
+
     await db.transaction("rw", db.books, db.entries, async () => {
       await db.books.clear();
       await db.entries.clear();
-      await db.books.bulkPut(data.books);
+      await db.books.bulkPut(books);
       await db.entries.bulkPut(data.entries);
     });
 
-    books.value = data.books;
+    booksById.value = {};
     entries.value = data.entries;
+    await refreshCounts();
+    booksVersion.value++;
   }
 
   return {
     // данные
-    books,
     entries,
+    counts,
+    booksVersion,
     totalBooks,
     totalEntries,
     // поиск по библиотеке
     librarySearch,
     // чтение
     getBook,
-    booksByStatus,
+    fetchShelf,
+    loadBook,
+    loadBooksByIds,
     entriesForBook,
     allEntries,
     // запись
@@ -224,5 +307,6 @@ export const useJournal = defineStore("journal", () => {
     importData,
     // жизненный цикл
     init,
+    refreshCounts,
   };
 });

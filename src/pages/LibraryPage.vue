@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import { useModals } from '../stores/modals'
-import { STATUS_META, type Book } from '../types'
+import { STATUS_META, type Book, type BookStatus } from '../types'
+import { useShelf } from '../composables/useShelf'
 import Cover from '../components/Cover.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { countBooks, countEntries, detectLang, displayTitle, formatDate, truncate } from '../utils'
@@ -11,7 +12,13 @@ import { countBooks, countEntries, detectLang, displayTitle, formatDate, truncat
 const journal = useJournal()
 const modals = useModals()
 
+// Полки грузятся постранично из IndexedDB, а не все книги разом.
+const readingShelf = useShelf('reading', 6)
+const wantShelf = useShelf('want', 6)
+const readShelf = useShelf('read', 6)
+
 // Поиск: русский запрос ищет по title и titleRu, английский — только по title
+// Применяется к уже загруженному окну (полноценный поиск по всей библиотеке — отдельная задача).
 const query = computed(() => journal.librarySearch.trim().toLowerCase())
 const matches = (b: Book) => {
   if (!query.value) return true
@@ -22,9 +29,9 @@ const matches = (b: Book) => {
   )
 }
 
-const reading = computed(() => journal.booksByStatus('reading').filter(matches))
-const want = computed(() => journal.booksByStatus('want').filter(matches))
-const read = computed(() => journal.booksByStatus('read').filter(matches))
+const reading = computed(() => readingShelf.books.value.filter(matches))
+const want = computed(() => wantShelf.books.value.filter(matches))
+const read = computed(() => readShelf.books.value.filter(matches))
 
 const nothingFound = computed(
   () =>
@@ -33,14 +40,22 @@ const nothingFound = computed(
 )
 
 const latestQuote = computed(() => journal.allEntries().find((e) => e.kind === 'quote'))
+// Книга из последней цитаты может быть не в кэше (не входит ни в одно загруженное окно) — догружаем точечно.
+watch(
+  latestQuote,
+  (q) => {
+    if (q) journal.loadBooksByIds([q.bookId])
+  },
+  { immediate: true },
+)
 const recallBook = computed(() =>
-  latestQuote.value ? journal.books.find((b) => b.id === latestQuote.value!.bookId) : undefined,
+  latestQuote.value ? journal.getBook(latestQuote.value.bookId) : undefined,
 )
 
-// Полки «ХОЧУ ЧИТАТЬ» / «ПРОЧИТАЛ»
-const shelves = computed<{ title: string; books: Book[] }[]>(() => [
-  { title: 'ХОЧУ ЧИТАТЬ', books: want.value },
-  { title: 'ПРОЧИТАЛ', books: read.value },
+// Полки «ХОЧУ ЧИТАТЬ» / «ПРОЧИТАЛ»: первые 6 + ссылка «смотреть далее», если книг больше.
+const shelves = computed(() => [
+  { title: 'ХОЧУ ЧИТАТЬ', status: 'want' as BookStatus, shelf: wantShelf, filtered: want.value },
+  { title: 'ПРОЧИТАЛ', status: 'read' as BookStatus, shelf: readShelf, filtered: read.value },
 ])
 
 const clearAll = async () => {
@@ -50,6 +65,19 @@ const clearAll = async () => {
   )
   if (!ok) return
   journal.clearAll()
+}
+
+// Карусель «ЧИТАЮ»: подгрузка следующей порции, когда долистали ленту почти до конца.
+const readingEl = ref<HTMLElement | null>(null)
+const onReadingScroll = () => {
+  const el = readingEl.value
+  if (!el) return
+  if (
+    el.scrollLeft + el.clientWidth >= el.scrollWidth - 200 &&
+    readingShelf.hasMore.value
+  ) {
+    readingShelf.loadMore()
+  }
 }
 </script>
 
@@ -177,9 +205,9 @@ const clearAll = async () => {
       <template v-if="reading.length > 0">
         <div class="sec">
           <h2>ЧИТАЮ</h2>
-          <span>{{ reading.length }}</span>
+          <span>{{ readingShelf.total.value }}</span>
         </div>
-        <div class="reading">
+        <div class="reading" ref="readingEl" @scroll.passive="onReadingScroll">
           <RouterLink v-for="b in reading" :key="b.id" class="bookrow" :to="`/book/${b.id}`">
             <Cover :gradient="b.cover" />
             <div class="info">
@@ -194,14 +222,14 @@ const clearAll = async () => {
         </div>
       </template>
 
-      <template v-for="shelf in shelves" :key="shelf.title">
-        <template v-if="shelf.books.length > 0">
+      <template v-for="entry in shelves" :key="entry.title">
+        <template v-if="entry.filtered.length > 0">
           <div class="sec">
-            <h2>{{ shelf.title }}</h2>
-            <span>{{ shelf.books.length }}</span>
+            <h2>{{ entry.title }}</h2>
+            <span>{{ entry.shelf.total.value }}</span>
           </div>
           <div class="shelf">
-            <RouterLink v-for="b in shelf.books" :key="b.id" class="tile" :to="`/book/${b.id}`">
+            <RouterLink v-for="b in entry.filtered" :key="b.id" class="tile" :to="`/book/${b.id}`">
               <Cover :gradient="b.cover" />
               <b>{{ displayTitle(b) }}</b>
               <span v-if="b.reason" class="hint">{{ truncate(b.reason) }}</span>
@@ -211,6 +239,13 @@ const clearAll = async () => {
               <b>добавить</b>
             </RouterLink>
           </div>
+          <RouterLink
+            v-if="entry.shelf.total.value > 6"
+            class="bj-btn ghost more-btn"
+            :to="`/library/shelf/${entry.status}`"
+          >
+            Смотреть далее ({{ entry.shelf.total.value }})
+          </RouterLink>
         </template>
       </template>
     </div>
