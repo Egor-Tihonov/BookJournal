@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useModals } from '../stores/modals'
+import UserMenu from './UserMenu.vue'
 
 /** Нижняя навигация для телефона (видна только на узких экранах, см. index.css). */
 const route = useRoute()
@@ -89,5 +90,7 @@ const addActive = computed(() => route.path === '/add')
       </svg>
       Добавить
     </RouterLink>
+
+    <UserMenu variant="nav" />
   </nav>
 </template>

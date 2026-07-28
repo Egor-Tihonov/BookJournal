@@ -35,17 +35,44 @@ export const useModals = defineStore('modals', () => {
     driveOpen.value = false
   }
 
+  // Общая модалка подтверждения опасных действий (вместо системного confirm()).
+  const confirmOpen = ref(false)
+  const confirmText = ref('')
+  const confirmActionLabel = ref('Удалить')
+  let confirmResolve: ((ok: boolean) => void) | null = null
+
+  /** Показывает модалку подтверждения и возвращает true, если пользователь согласился. */
+  const openConfirm = (text: string, actionLabel = 'Удалить') => {
+    confirmText.value = text
+    confirmActionLabel.value = actionLabel
+    confirmOpen.value = true
+    return new Promise<boolean>((resolve) => {
+      confirmResolve = resolve
+    })
+  }
+
+  const closeConfirm = (ok: boolean) => {
+    confirmOpen.value = false
+    confirmResolve?.(ok)
+    confirmResolve = null
+  }
+
   return {
     noteOpen,
     noteBookId,
     reviewOpen,
     reviewBookId,
     driveOpen,
+    confirmOpen,
+    confirmText,
+    confirmActionLabel,
     openNote,
     openReview,
     closeNote,
     closeReview,
     openDrive,
     closeDrive,
+    openConfirm,
+    closeConfirm,
   }
 })
