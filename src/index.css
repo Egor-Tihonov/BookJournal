@@ -275,6 +275,29 @@ a {
   color: #8f3b2c;
   background: rgba(143, 59, 44, 0.08);
 }
+.titlebar-actions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.cloud-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.cloud-btn:hover {
+  color: var(--accent);
+  background: rgba(44, 34, 24, 0.06);
+}
 .topbar {
   display: flex;
   align-items: center;
