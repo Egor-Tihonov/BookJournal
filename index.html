@@ -5,7 +5,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Book Journal</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <meta name="theme-color" content="#f3ede1" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3ede1" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#191510" />
+        <script>
+            // Выбранная тема применяется до отрисовки, чтобы страница не мигала другой темой
+            try {
+                var t = localStorage.getItem("bj-theme");
+                if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+            } catch (e) {}
+        </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
