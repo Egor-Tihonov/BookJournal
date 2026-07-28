@@ -148,6 +148,12 @@ a {
   padding: 10px;
   border-radius: 12px;
   cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
 }
 .me:hover {
   background: var(--card);
@@ -297,6 +303,44 @@ a {
 .cloud-btn:hover {
   color: var(--accent);
   background: rgba(44, 34, 24, 0.06);
+}
+.user-menu {
+  position: relative;
+}
+.user-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 240px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 14px 34px rgba(44, 34, 24, 0.16), inset 0 0 0 1px var(--line);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.user-pop.up {
+  top: auto;
+  bottom: calc(100% + 10px);
+}
+.side-me .user-pop {
+  left: 0;
+  right: auto;
+}
+.nav-me .user-pop {
+  right: -8px;
+  max-width: calc(100vw - 24px);
+}
+.user-pop .hintline {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.user-pop .err {
+  font-size: 12px;
+  color: #8f3b2c;
 }
 .topbar {
   display: flex;
@@ -1191,9 +1235,16 @@ textarea {
   border-top: 1px solid var(--line);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
 }
-.bottomnav a,
-.bottomnav button {
+/* > вместо общего потомка — иначе кнопки .bj-btn внутри выпадающего user-pop
+   тоже попадут под стили пунктов навигации */
+.bottomnav > a,
+.bottomnav > button,
+.nav-me {
   flex: 1;
+}
+.bottomnav > a,
+.bottomnav > button,
+.nav-me > button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1205,8 +1256,10 @@ textarea {
   font: 500 11px var(--sans);
   color: var(--muted);
   cursor: pointer;
+  width: 100%;
 }
-.bottomnav a.on {
+.bottomnav > a.on,
+.nav-me > button.on {
   color: var(--ink);
   background: #e7dfce;
 }
@@ -1271,8 +1324,9 @@ textarea {
   .top .search {
     max-width: none;
   }
+  /* прячем кнопки самой панели — их роль теперь у нижней навигации */
   .top .spacer,
-  .top .bj-btn {
+  .top > .bj-btn {
     display: none;
   }
   h1 {

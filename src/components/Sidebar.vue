@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import { STATUS_META, STATUS_ORDER } from '../types'
+import UserMenu from './UserMenu.vue'
 
 const journal = useJournal()
 const route = useRoute()
@@ -74,5 +75,8 @@ const feedActive = computed(() => route.path === '/feed' || route.path.startsWit
       </span>
       <span class="n">{{ journal.booksByStatus(status).length }}</span>
     </RouterLink>
+
+    <div class="grow" />
+    <UserMenu variant="side" />
   </aside>
 </template>

@@ -43,8 +43,12 @@ const shelves = computed<{ title: string; books: Book[] }[]>(() => [
   { title: 'ПРОЧИТАЛ', books: read.value },
 ])
 
-const clearAll = () => {
-  if (!confirm(`Удалить все книги (${journal.totalBooks}) вместе с записями? Это необратимо.`)) return
+const clearAll = async () => {
+  const ok = await modals.openConfirm(
+    `Удалить все книги (${journal.totalBooks}) вместе с записями? Это необратимо.`,
+    'Удалить всё',
+  )
+  if (!ok) return
   journal.clearAll()
 }
 </script>

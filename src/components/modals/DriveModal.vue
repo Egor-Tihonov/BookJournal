@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDrive } from '../../stores/drive'
 import { useJournal } from '../../stores/journal'
 import { useModals } from '../../stores/modals'
@@ -11,13 +11,18 @@ const drive = useDrive()
 // formatDate из utils форматирует только дату — для бэкапа важно ещё и время сохранения.
 const lastBackupText = () => new Date(drive.lastBackupAt).toLocaleString('ru')
 
+// Подтверждение восстановления — встроенный шаг вместо системного confirm().
+const confirmingRestore = ref(false)
+
+watch(
+  () => modals.driveOpen,
+  () => {
+    confirmingRestore.value = false
+  },
+)
+
 const onRestore = async () => {
-  if (
-    !confirm(
-      `Заменить текущие данные (книг: ${journal.totalBooks}, записей: ${journal.totalEntries}) данными из Google Drive?`,
-    )
-  )
-    return
+  confirmingRestore.value = false
   const ok = await drive.restore()
   if (ok) modals.closeDrive()
 }
@@ -60,7 +65,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
               <template v-else>Ещё ни разу не сохранялось с этого устройства.</template>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px">
+            <div
+              v-if="!confirmingRestore"
+              style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px"
+            >
               <button
                 class="bj-btn"
                 type="button"
@@ -73,9 +81,26 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
                 class="bj-btn ghost"
                 type="button"
                 :disabled="drive.busy !== 'idle'"
-                @click="onRestore"
+                @click="confirmingRestore = true"
               >
                 {{ drive.busy === 'restoring' ? 'Восстанавливаю…' : 'Восстановить из Drive' }}
+              </button>
+            </div>
+
+            <!-- Шаг подтверждения восстановления -->
+            <div
+              v-else
+              style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px"
+            >
+              <div class="confirm-text">
+                Заменить текущие данные (книг: {{ journal.totalBooks }}, записей:
+                {{ journal.totalEntries }}) данными из Google Drive?
+              </div>
+              <button class="bj-btn ghost danger" type="button" @click="onRestore">
+                Да, заменить
+              </button>
+              <button class="bj-btn ghost" type="button" @click="confirmingRestore = false">
+                Отмена
               </button>
             </div>
 
@@ -93,5 +118,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   margin-top: 14px;
   font-size: 13px;
   color: #8f3b2c;
+}
+.confirm-text {
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.45;
 }
 </style>

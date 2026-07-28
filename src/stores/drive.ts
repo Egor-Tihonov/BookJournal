@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useJournal } from './journal'
-import { getAccessToken } from '../services/googledrive/auth'
+import { useAuth } from './auth'
 import { downloadBackup, findBackupFile, uploadBackup } from '../services/googledrive/drive'
 
 const LAST_BACKUP_KEY = 'bj-drive-last-backup'
@@ -17,7 +17,7 @@ export const useDrive = defineStore('drive', () => {
     busy.value = 'saving'
     try {
       const journal = useJournal()
-      const token = await getAccessToken()
+      const token = await useAuth().getToken()
       const content = JSON.stringify(journal.exportData())
       await uploadBackup(token, content)
       lastBackupAt.value = new Date().toISOString()
@@ -35,7 +35,7 @@ export const useDrive = defineStore('drive', () => {
     busy.value = 'restoring'
     try {
       const journal = useJournal()
-      const token = await getAccessToken()
+      const token = await useAuth().getToken()
       const file = await findBackupFile(token)
       if (!file) {
         error.value = 'В Google Drive ещё нет сохранённых данных'

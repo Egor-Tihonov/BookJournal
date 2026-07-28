@@ -7,6 +7,7 @@ import BottomNav from './BottomNav.vue'
 import QuickNoteModal from './modals/QuickNoteModal.vue'
 import ReviewModal from './modals/ReviewModal.vue'
 import DriveModal from './modals/DriveModal.vue'
+import ConfirmModal from './modals/ConfirmModal.vue'
 
 const route = useRoute()
 const bodyRef = ref<HTMLDivElement | null>(null)
@@ -35,4 +36,5 @@ watch(
   <QuickNoteModal />
   <ReviewModal />
   <DriveModal />
+  <ConfirmModal />
 </template>

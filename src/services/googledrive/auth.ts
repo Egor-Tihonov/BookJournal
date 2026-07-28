@@ -6,15 +6,51 @@ import { googleSdkLoaded } from "vue3-google-login";
 export const GOOGLE_CLIENT_ID =
   "782838705901-n4mi50qjqum15bbu21jq59gko3rj61dn.apps.googleusercontent.com";
 
-const SCOPE = "https://www.googleapis.com/auth/drive.appdata";
+const SCOPE =
+  "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
 
-// Кэш токена в памяти модуля — переживает открытие/закрытие модалки, но не перезагрузку страницы.
+// Ключ localStorage для персистентного кэша токена — переживает перезагрузку страницы.
+const TOKEN_STORAGE_KEY = "bj-google-token";
+
+// Кэш токена в памяти модуля, при старте подгружается из localStorage.
 let cachedToken = "";
 let tokenExpiresAt = 0;
 
+try {
+  const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (raw) {
+    const saved = JSON.parse(raw) as {
+      token: string;
+      expiresAt: number;
+      scope?: string;
+    };
+    // Токен, выданный под другой набор разрешений (scope), не используем —
+    // иначе после расширения scope почта/профиль не подтянутся до истечения токена.
+    if (saved.scope === SCOPE) {
+      cachedToken = saved.token ?? "";
+      tokenExpiresAt = saved.expiresAt ?? 0;
+    }
+  }
+} catch {
+  // битые данные в localStorage — просто игнорируем, токен запросится заново
+}
+
+/** Сохраняет токен в localStorage, чтобы он пережил перезагрузку страницы. */
+function persistToken(token: string, expiresAt: number) {
+  localStorage.setItem(
+    TOKEN_STORAGE_KEY,
+    JSON.stringify({ token, expiresAt, scope: SCOPE }),
+  );
+}
+
+/** Есть ли сейчас валидный (не истёкший) токен в кэше. */
+export function hasValidToken(): boolean {
+  return Boolean(cachedToken) && Date.now() < tokenExpiresAt - 60_000;
+}
+
 /** Возвращает access-токен: если он ещё живой (с запасом 60 сек) — без попапа, иначе спрашивает пользователя. */
 export function getAccessToken(): Promise<string> {
-  if (cachedToken && Date.now() < tokenExpiresAt - 60_000) {
+  if (hasValidToken()) {
     return Promise.resolve(cachedToken);
   }
 
@@ -33,6 +69,7 @@ export function getAccessToken(): Promise<string> {
             cachedToken = resp.access_token;
             tokenExpiresAt =
               Date.now() + Number(resp.expires_in ?? 3600) * 1000;
+            persistToken(cachedToken, tokenExpiresAt);
             resolve(cachedToken);
           },
           error_callback: () => {
@@ -40,6 +77,45 @@ export function getAccessToken(): Promise<string> {
           },
         })
         .requestAccessToken();
+    });
+  });
+}
+
+export interface GoogleUserInfo {
+  name?: string;
+  email?: string;
+}
+
+/** Запрашивает имя и email владельца токена. */
+export async function fetchUserInfo(token: string): Promise<GoogleUserInfo> {
+  const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`Не удалось получить профиль Google (${res.status})`);
+  return res.json();
+}
+
+/** Отзывает доступ у Google и полностью чистит локальный кэш токена. */
+export function revokeAccess(): Promise<void> {
+  const token = cachedToken;
+
+  const clear = () => {
+    cachedToken = "";
+    tokenExpiresAt = 0;
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  };
+
+  if (!token) {
+    clear();
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    googleSdkLoaded((google) => {
+      google.accounts.oauth2.revoke(token, () => {
+        clear();
+        resolve();
+      });
     });
   });
 }

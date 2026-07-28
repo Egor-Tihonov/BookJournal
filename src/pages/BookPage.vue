@@ -42,9 +42,12 @@ const onStatusChange = (s: BookStatus) => {
   if (book.value) journal.setStatus(book.value.id, s)
 }
 
-const removeBook = () => {
+const removeBook = async () => {
   if (!book.value) return
-  if (!confirm(`Удалить «${book.value.title}» вместе с записями дневника?`)) return
+  const ok = await modals.openConfirm(
+    `Удалить «${book.value.title}» вместе с записями дневника?`,
+  )
+  if (!ok) return
   journal.removeBook(book.value.id)
   router.push('/library')
 }
