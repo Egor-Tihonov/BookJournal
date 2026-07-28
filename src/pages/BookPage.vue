@@ -64,7 +64,34 @@ const removeBook = () => {
 
   <section v-else class="view">
     <div class="wrap">
-      <RouterLink class="back" to="/library"> ‹ Библиотека </RouterLink>
+      <div class="topbar">
+        <RouterLink class="back" to="/library"> ‹ Библиотека </RouterLink>
+        <button
+          class="trash-btn"
+          type="button"
+          title="Удалить книгу"
+          aria-label="Удалить книгу"
+          @click="removeBook"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6" />
+            <path d="M14 11v6" />
+          </svg>
+        </button>
+      </div>
       <div class="book">
         <div class="left">
           <div class="head">
@@ -114,10 +141,6 @@ const removeBook = () => {
             @click="modals.openReview(book.id)"
           >
             Завершить книгу
-          </button>
-
-          <button class="bj-btn ghost danger" type="button" @click="removeBook">
-            Удалить книгу
           </button>
 
         </div>
