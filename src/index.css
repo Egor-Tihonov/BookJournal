@@ -162,6 +162,7 @@ a {
 .ava {
   width: 36px;
   height: 36px;
+  flex-shrink: 0; /* длинная почта рядом не должна сжимать круг в овал */
   border-radius: 50%;
   background: var(--ink);
   color: var(--paper);
@@ -170,8 +171,15 @@ a {
   justify-content: center;
   font: 400 16px var(--serif);
 }
+.me > span:last-child {
+  min-width: 0; /* разрешает тексту ужиматься и включает троеточие ниже */
+}
 .me b {
   font-size: 13px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .me small {
   display: block;
