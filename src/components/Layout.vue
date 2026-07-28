@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
+import { useSidebar } from '../composables/useSidebar'
 import TopBar from './TopBar.vue'
 import BottomNav from './BottomNav.vue'
 import QuickNoteModal from './modals/QuickNoteModal.vue'
@@ -11,6 +12,7 @@ import ConfirmModal from './modals/ConfirmModal.vue'
 
 const route = useRoute()
 const bodyRef = ref<HTMLDivElement | null>(null)
+const { collapsed: sideCollapsed } = useSidebar()
 
 // Сброс прокрутки контента при смене экрана (как в исходном макете).
 watch(
@@ -22,7 +24,7 @@ watch(
 </script>
 
 <template>
-  <Sidebar />
+  <Sidebar v-show="!sideCollapsed" />
   <main class="main">
     <TopBar />
     <div class="body" ref="bodyRef">
