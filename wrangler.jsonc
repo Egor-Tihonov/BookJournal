@@ -1,6 +1,6 @@
 {
   // Конфиг Cloudflare Worker: раздаёт собранную статику из dist.
-  "name": "bookjournal",
+  "name": "book-journal",
   "compatibility_date": "2026-07-28",
   "assets": {
     "directory": "./dist",
