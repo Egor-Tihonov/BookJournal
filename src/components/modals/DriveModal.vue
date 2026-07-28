@@ -63,43 +63,42 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
             </button>
 
             <h3>Google Drive</h3>
-            <div class="sub">
-              Резервная копия библиотеки хранится в скрытой папке приложения на вашем Google Диске.
+
+            <!-- Пояснение и статус автосинхронизации — единая колонка без «слипания» с кнопками -->
+            <div class="sync-info">
+              <div class="sub">
+                Резервная копия библиотеки хранится в скрытой папке приложения на вашем Google Диске.
+              </div>
+              <div class="sub">
+                <template v-if="!auth.signedIn">Автосинхронизация выключена — войдите в Google</template>
+                <template v-else-if="sync.status === 'syncing'">Синхронизация…</template>
+                <template v-else-if="sync.status === 'needAuth'">Войдите, чтобы возобновить синхронизацию</template>
+                <span v-else-if="sync.status === 'error'" class="sync-error">{{ sync.error }}</span>
+                <template v-else-if="sync.status === 'synced'">
+                  Синхронизировано: {{ new Date(sync.lastSyncAt).toLocaleString('ru') }}
+                </template>
+              </div>
+              <div v-if="auth.signedIn && sync.pendingPush && sync.status !== 'syncing'" class="sub">
+                Есть неотправленные изменения
+              </div>
+              <div v-if="auth.signedIn" class="sub">
+                {{
+                  sync.storagePersisted
+                    ? 'Локальное хранилище защищено от очистки'
+                    : 'Браузер может очистить локальные данные — включена синхронизация'
+                }}
+              </div>
             </div>
 
-            <!-- Статус автосинхронизации -->
-            <div class="sub" style="margin-top: -10px">
-              <template v-if="!auth.signedIn">Автосинхронизация выключена — войдите в Google</template>
-              <template v-else-if="sync.status === 'syncing'">Синхронизация…</template>
-              <template v-else-if="sync.status === 'needAuth'">Войдите, чтобы возобновить синхронизацию</template>
-              <span v-else-if="sync.status === 'error'" class="sync-error">{{ sync.error }}</span>
-              <template v-else-if="sync.status === 'synced'">
-                Синхронизировано: {{ new Date(sync.lastSyncAt).toLocaleString('ru') }}
-              </template>
-            </div>
-            <div
-              v-if="auth.signedIn && sync.pendingPush && sync.status !== 'syncing'"
-              class="sub"
-              style="margin-top: -6px"
-            >
-              Есть неотправленные изменения
-            </div>
             <button
               v-if="auth.signedIn && sync.status === 'needAuth'"
               class="bj-btn"
               type="button"
-              style="margin-top: 10px"
+              style="margin-top: 16px"
               @click="onSignInAndSync"
             >
               Войти и синхронизировать
             </button>
-            <div v-if="auth.signedIn" class="sub" style="margin-top: -6px">
-              {{
-                sync.storagePersisted
-                  ? 'Локальное хранилище защищено от очистки'
-                  : 'Браузер может очистить локальные данные — включена синхронизация'
-              }}
-            </div>
 
             <!-- Отправка в Drive полностью автоматическая; вручную осталось только восстановление -->
             <div
@@ -143,6 +142,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 </template>
 
 <style scoped>
+.sync-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sync-info .sub {
+  margin: 0;
+}
 .drive-error {
   margin-top: 14px;
   font-size: 13px;
