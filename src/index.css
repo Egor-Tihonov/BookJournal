@@ -247,8 +247,43 @@ a {
 .bj-btn.ghost.danger:hover {
   background: rgba(143, 59, 44, 0.07);
 }
-.clear-lib {
-  margin-top: 14px;
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+.titlebar h1 {
+  margin: 0;
+}
+.trash-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.trash-btn:hover {
+  color: #8f3b2c;
+  background: rgba(143, 59, 44, 0.08);
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.topbar .back {
+  margin-bottom: 0;
 }
 .body {
   flex: 1;
