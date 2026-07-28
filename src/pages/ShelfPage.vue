@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { STATUS_META, type BookStatus } from '../types'
 import { useShelf } from '../composables/useShelf'
 import Cover from '../components/Cover.vue'
+import { SHELF_FULL_PAGE_SIZE } from '../config'
 import { displayTitle, truncate } from '../utils'
 
 const route = useRoute()
@@ -18,7 +19,7 @@ if (!isValidStatus(status.value)) {
 }
 
 // useShelf вызывается только если статус валиден — иначе редирект выше уже запущен.
-const shelf = useShelf(isValidStatus(status.value) ? status.value : 'want', 12)
+const shelf = useShelf(isValidStatus(status.value) ? status.value : 'want', SHELF_FULL_PAGE_SIZE)
 
 const loadingMore = ref(false)
 const loadMore = async () => {

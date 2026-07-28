@@ -3,13 +3,20 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useDrive } from '../../stores/drive'
 import { useJournal } from '../../stores/journal'
 import { useModals } from '../../stores/modals'
+import { useAuth } from '../../stores/auth'
+import { useSync } from '../../stores/sync'
 
 const modals = useModals()
 const journal = useJournal()
 const drive = useDrive()
+const auth = useAuth()
+const sync = useSync()
 
-// formatDate из utils форматирует только дату — для бэкапа важно ещё и время сохранения.
-const lastBackupText = () => new Date(drive.lastBackupAt).toLocaleString('ru')
+// Кнопка возобновления синка после истёкшего токена: сначала входим, потом сразу гоним цикл синка.
+const onSignInAndSync = async () => {
+  await auth.signIn()
+  if (!auth.error) sync.syncNow('signin')
+}
 
 // Подтверждение восстановления — встроенный шаг вместо системного confirm().
 const confirmingRestore = ref(false)
@@ -56,34 +63,55 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
             </button>
 
             <h3>Google Drive</h3>
-            <div class="sub">
-              Резервная копия библиотеки хранится в скрытой папке приложения на вашем Google Диске.
+
+            <!-- Пояснение и статус автосинхронизации — единая колонка без «слипания» с кнопками -->
+            <div class="sync-info">
+              <div class="sub">
+                Резервная копия библиотеки хранится в скрытой папке приложения на вашем Google Диске.
+              </div>
+              <div class="sub">
+                <template v-if="!auth.signedIn">Автосинхронизация выключена — войдите в Google</template>
+                <template v-else-if="sync.status === 'syncing'">Синхронизация…</template>
+                <template v-else-if="sync.status === 'needAuth'">Войдите, чтобы возобновить синхронизацию</template>
+                <span v-else-if="sync.status === 'error'" class="sync-error">{{ sync.error }}</span>
+                <template v-else-if="sync.status === 'synced'">
+                  Синхронизировано: {{ new Date(sync.lastSyncAt).toLocaleString('ru') }}
+                </template>
+              </div>
+              <div v-if="auth.signedIn && sync.pendingPush && sync.status !== 'syncing'" class="sub">
+                Есть неотправленные изменения
+              </div>
+              <div v-if="auth.signedIn" class="sub">
+                {{
+                  sync.storagePersisted
+                    ? 'Локальное хранилище защищено от очистки'
+                    : 'Браузер может очистить локальные данные — включена синхронизация'
+                }}
+              </div>
             </div>
 
-            <div class="sub" style="margin-top: -10px">
-              <template v-if="drive.lastBackupAt">Последнее сохранение: {{ lastBackupText() }}</template>
-              <template v-else>Ещё ни разу не сохранялось с этого устройства.</template>
-            </div>
+            <button
+              v-if="auth.signedIn && sync.status === 'needAuth'"
+              class="bj-btn"
+              type="button"
+              style="margin-top: 16px"
+              @click="onSignInAndSync"
+            >
+              Войти и синхронизировать
+            </button>
 
+            <!-- Отправка в Drive полностью автоматическая; вручную осталось только восстановление -->
             <div
               v-if="!confirmingRestore"
               style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px"
             >
               <button
-                class="bj-btn"
-                type="button"
-                :disabled="drive.busy !== 'idle'"
-                @click="drive.backup()"
-              >
-                {{ drive.busy === 'saving' ? 'Сохраняю…' : 'Сохранить в Drive' }}
-              </button>
-              <button
                 class="bj-btn ghost"
                 type="button"
-                :disabled="drive.busy !== 'idle'"
+                :disabled="drive.busy"
                 @click="confirmingRestore = true"
               >
-                {{ drive.busy === 'restoring' ? 'Восстанавливаю…' : 'Восстановить из Drive' }}
+                {{ drive.busy ? 'Восстанавливаю…' : 'Восстановить из Drive' }}
               </button>
             </div>
 
@@ -114,9 +142,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 </template>
 
 <style scoped>
+.sync-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sync-info .sub {
+  margin: 0;
+}
 .drive-error {
   margin-top: 14px;
   font-size: 13px;
+  color: #8f3b2c;
+}
+.sync-error {
   color: #8f3b2c;
 }
 .confirm-text {

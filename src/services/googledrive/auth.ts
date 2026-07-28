@@ -2,9 +2,7 @@
 // Здесь только получение access-токена; работа с файлами Drive — в drive.ts.
 
 import { googleSdkLoaded } from "vue3-google-login";
-
-export const GOOGLE_CLIENT_ID =
-  "782838705901-n4mi50qjqum15bbu21jq59gko3rj61dn.apps.googleusercontent.com";
+import { GOOGLE_CLIENT_ID } from "../../config";
 
 const SCOPE =
   "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";

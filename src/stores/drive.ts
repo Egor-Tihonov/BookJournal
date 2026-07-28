@@ -2,37 +2,19 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useJournal } from './journal'
 import { useAuth } from './auth'
-import { downloadBackup, findBackupFile, uploadBackup } from '../services/googledrive/drive'
+import { useSync } from './sync'
+import { downloadBackup, findBackupFile } from '../services/googledrive/drive'
 
-const LAST_BACKUP_KEY = 'bj-drive-last-backup'
-
+// Ручной остался только аварийный сценарий — восстановление (полная замена локальных данных).
+// Отправка в Drive теперь целиком на автосинхронизации (см. stores/sync.ts).
 export const useDrive = defineStore('drive', () => {
-  const busy = ref<'idle' | 'saving' | 'restoring'>('idle')
+  const busy = ref(false)
   const error = ref('')
-  const lastBackupAt = ref(localStorage.getItem(LAST_BACKUP_KEY) ?? '')
-
-  /** Сохранить текущую библиотеку в Google Drive. */
-  async function backup() {
-    error.value = ''
-    busy.value = 'saving'
-    try {
-      const journal = useJournal()
-      const token = await useAuth().getToken()
-      const content = JSON.stringify(await journal.exportData())
-      await uploadBackup(token, content)
-      lastBackupAt.value = new Date().toISOString()
-      localStorage.setItem(LAST_BACKUP_KEY, lastBackupAt.value)
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Не удалось сохранить в Google Drive'
-    } finally {
-      busy.value = 'idle'
-    }
-  }
 
   /** Восстановить библиотеку из Google Drive. Возвращает true при успехе. */
   async function restore(): Promise<boolean> {
     error.value = ''
-    busy.value = 'restoring'
+    busy.value = true
     try {
       const journal = useJournal()
       const token = await useAuth().getToken()
@@ -43,14 +25,17 @@ export const useDrive = defineStore('drive', () => {
       }
       const content = await downloadBackup(token, file.id)
       await journal.importData(JSON.parse(content))
+      // Данные только что заменены вручную из этого же файла — забываем modifiedTime,
+      // чтобы следующий цикл автосинхронизации перепроверил файл, а не счёл его уже виденным.
+      useSync().forgetRemote()
       return true
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось восстановить данные из Google Drive'
       return false
     } finally {
-      busy.value = 'idle'
+      busy.value = false
     }
   }
 
-  return { busy, error, lastBackupAt, backup, restore }
+  return { busy, error, restore }
 })
