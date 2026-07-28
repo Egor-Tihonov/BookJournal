@@ -43,8 +43,8 @@ const nothingFound = computed(
 )
 
 // Напоминание «однажды ты…»: цитата, мысль или впечатление о прочитанной книге из прошлого
-// (старше недели). Выбор стабилен в течение дня (индекс от номера дня) — воспоминание меняется
-// раз в сутки, а не при каждом обновлении страницы. Пока старых нет — показываем самое свежее.
+// (старше недели). Выбирается случайно при каждом открытии библиотеки; сид фиксируется на
+// время визита, чтобы блок не перескакивал при доборе данных. Пока старых нет — самое свежее.
 interface RecallItem {
   kind: 'quote' | 'thought' | 'review'
   text: string
@@ -56,6 +56,8 @@ interface RecallItem {
 // Книги с отзывом/оценкой лежат в IndexedDB не целиком в памяти — догружаем при открытии.
 const reviewedBooks = ref<Book[]>([])
 journal.loadReviewedBooks().then((list) => (reviewedBooks.value = list))
+
+const memorySeed = Math.floor(Math.random() * 1_000_000)
 
 const memoryEntry = computed<RecallItem | undefined>(() => {
   const entryItems: RecallItem[] = journal
@@ -75,8 +77,7 @@ const memoryEntry = computed<RecallItem | undefined>(() => {
   const weekAgo = Date.now() - 7 * 86_400_000
   const past = all.filter((e) => new Date(e.createdAt).getTime() < weekAgo)
   const pool = past.length > 0 ? past : all
-  const dayIndex = Math.floor(Date.now() / 86_400_000)
-  return pool[dayIndex % pool.length]
+  return pool[memorySeed % pool.length]
 })
 // Длинное воспоминание сворачиваем до нескольких строк; «Читать дальше» раскрывает.
 const memoryExpanded = ref(false)
