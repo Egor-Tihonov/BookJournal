@@ -6,7 +6,7 @@ import "./index.css";
 import App from "./App.vue";
 import { router } from "./router";
 import { useJournal } from "./stores/journal";
-import { GOOGLE_CLIENT_ID } from "./services/googleDrive";
+import { GOOGLE_CLIENT_ID } from "./services/googledrive/auth";
 
 const app = createApp(App)
   .use(createPinia())
