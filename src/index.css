@@ -455,10 +455,17 @@ h1 {
   color: var(--faint);
 }
 
+/* «ЧИТАЮ» — горизонтальная карусель, карточки не сжимаются, подгрузка по сентинелу в конце ленты */
 .reading {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scroll-snap-type: x proximity;
+}
+.reading .bookrow {
+  flex: 0 0 320px;
+  scroll-snap-align: start;
 }
 .bookrow {
   display: flex;
@@ -569,6 +576,9 @@ h1 {
 .bookrow:hover .hint {
   opacity: 1;
   visibility: visible;
+}
+.more-btn {
+  margin-top: 16px;
 }
 
 /* ---- book card ---- */
@@ -1286,11 +1296,6 @@ textarea {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-@media (max-width: 720px) {
-  .reading {
-    grid-template-columns: 1fr;
-  }
-}
 @media (max-width: 560px) {
   .shelf {
     grid-template-columns: repeat(3, 1fr);
@@ -1356,5 +1361,9 @@ textarea {
     width: 100%;
     border-radius: 20px 20px 0 0;
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+  /* на телефоне карточки карусели чуть уже */
+  .reading .bookrow {
+    flex-basis: 260px;
   }
 }

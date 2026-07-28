@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useJournal } from '../../stores/journal'
 import { useModals } from '../../stores/modals'
-import type { EntryKind } from '../../types'
+import type { Book, EntryKind } from '../../types'
 import { displayTitle } from '../../utils'
 import Cover from '../Cover.vue'
 
@@ -17,7 +17,15 @@ const page = ref('')
 
 const activeId = computed(() => modals.noteBookId ?? pickedId.value)
 const book = computed(() => (activeId.value ? journal.getBook(activeId.value) : undefined))
-const readingBooks = computed(() => journal.booksByStatus('reading'))
+
+// Список книг «Читаю» грузится из БД при открытии модалки — целиком его в сторе больше нет.
+const readingBooks = ref<Book[]>([])
+watch(
+  () => modals.noteOpen,
+  (open) => {
+    if (open) journal.fetchShelf('reading', 0, 50).then((list) => (readingBooks.value = list))
+  },
+)
 
 const textareaEl = ref<HTMLTextAreaElement | null>(null)
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useJournal } from '../stores/journal'
 import { useModals } from '../stores/modals'
@@ -13,6 +13,15 @@ const route = useRoute()
 const router = useRouter()
 const journal = useJournal()
 const modals = useModals()
+
+// При прямом заходе по URL книги может ещё не быть в кэше — догружаем по id из адреса.
+watch(
+  () => route.params.id,
+  (id) => {
+    if (typeof id === 'string' && id) journal.loadBook(id)
+  },
+  { immediate: true },
+)
 
 const book = computed(() => {
   const id = route.params.id

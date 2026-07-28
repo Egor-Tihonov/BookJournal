@@ -73,7 +73,7 @@ const feedActive = computed(() => route.path === '/feed' || route.path.startsWit
         <span class="dot" :style="{ background: STATUS_META[status].color }" />
         {{ STATUS_META[status].label }}
       </span>
-      <span class="n">{{ journal.booksByStatus(status).length }}</span>
+      <span class="n">{{ journal.counts[status] }}</span>
     </RouterLink>
 
     <div class="grow" />

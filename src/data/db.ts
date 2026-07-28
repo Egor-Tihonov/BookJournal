@@ -12,6 +12,21 @@ class MyBookShelf extends Dexie {
       books: "id, title, author, year, cover, status", // первичный ключ id(передаем сами), остальное индексы для выборки
       entries: "id, bookId, createdAt", // первичный ключ id(передаем сами), остальное индексы для выборки
     });
+    // v2: добавлен statusChangedAt и составной индекс [status+statusChangedAt] —
+    // по нему выбираем книги полки постранично, свежие сверху, без загрузки всех книг в память.
+    this.version(2)
+      .stores({
+        books: "id, title, author, year, cover, status, statusChangedAt, [status+statusChangedAt]",
+        entries: "id, bookId, createdAt",
+      })
+      .upgrade((tx) =>
+        tx
+          .table("books")
+          .toCollection()
+          .modify((b) => {
+            if (!b.statusChangedAt) b.statusChangedAt = new Date().toISOString();
+          }),
+      );
   }
 }
 
