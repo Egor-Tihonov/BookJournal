@@ -9,6 +9,7 @@ import QuickNoteModal from './modals/QuickNoteModal.vue'
 import ReviewModal from './modals/ReviewModal.vue'
 import DriveModal from './modals/DriveModal.vue'
 import ConfirmModal from './modals/ConfirmModal.vue'
+import SessionModal from './modals/SessionModal.vue'
 
 const route = useRoute()
 const bodyRef = ref<HTMLDivElement | null>(null)
@@ -39,4 +40,5 @@ watch(
   <ReviewModal />
   <DriveModal />
   <ConfirmModal />
+  <SessionModal />
 </template>
