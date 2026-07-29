@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAuth } from '../stores/auth'
+import ThemeToggle from './ThemeToggle.vue'
 
 const props = defineProps<{ variant: 'side' | 'nav' }>()
 
@@ -111,6 +112,8 @@ onBeforeUnmount(() => {
       Аккаунт
     </button>
     <div v-if="open" class="user-pop up">
+      <!-- На телефоне сайдбара нет — переключатель темы живёт в меню аккаунта -->
+      <ThemeToggle />
       <template v-if="!auth.signedIn">
         <div class="hintline">Войдите, чтобы синхронизировать библиотеку с Google Drive</div>
         <button class="bj-btn" type="button" :disabled="auth.busy" @click="onSignIn">
