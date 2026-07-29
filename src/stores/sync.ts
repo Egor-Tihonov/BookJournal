@@ -192,12 +192,21 @@ export const useSync = defineStore('sync', () => {
       () => auth.signedIn,
       (signedIn) => {
         if (signedIn) syncNow('signin')
+        else status.value = 'idle' // вышел из аккаунта — сбрасываем needAuth/error
       },
     )
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') syncNow('visible')
     })
+
+    // Токен истекает через час. Без этой проверки истечение заметили бы только при
+    // следующем действии пользователя — а так модалка продления появится сама.
+    setInterval(() => {
+      if (auth.signedIn && status.value !== 'syncing' && !hasValidToken()) {
+        status.value = 'needAuth'
+      }
+    }, 60_000)
 
     if (auth.signedIn) syncNow('start')
   }
