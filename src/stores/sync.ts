@@ -7,7 +7,7 @@ import { defineStore } from 'pinia'
 import { useJournal } from './journal'
 import { useAuth } from './auth'
 import { downloadBackup, findBackupFile, uploadBackup } from '../services/googledrive/drive'
-import { hasValidToken } from '../services/googledrive/auth'
+import { AuthRequiredError, hasValidToken } from '../services/googledrive/auth'
 import { mergeSnapshots, normalizeSnapshot, type Snapshot } from '../services/sync/merge'
 import { SYNC_MIN_PULL_INTERVAL_MS, SYNC_PUSH_DEBOUNCE_MS } from '../config'
 import type { Book, DiaryEntry, Deletion } from '../types'
@@ -92,16 +92,12 @@ export const useSync = defineStore('sync', () => {
     ) {
       return
     }
-    if (!hasValidToken()) {
-      // Изменения не теряются — pendingPush остаётся выставленным до следующего успешного цикла.
-      status.value = 'needAuth'
-      return
-    }
-
     const journal = useJournal()
     status.value = 'syncing'
     dirtiedDuringCycle = false
     try {
+      // Токен берётся тихо: из памяти или продлением по httpOnly-куке. Попапов тут нет —
+      // если сессии больше нет, прилетит AuthRequiredError и мы попросим войти.
       const token = await auth.getToken()
       lastPullAt = Date.now()
 
@@ -163,6 +159,11 @@ export const useSync = defineStore('sync', () => {
       error.value = ''
     } catch (e) {
       // pendingPush намеренно не сбрасываем — изменения остаются в очереди до следующей попытки.
+      if (e instanceof AuthRequiredError) {
+        // Сессия умерла (refresh-токен отозван/истёк) — нужен вход кликом, покажется модалка.
+        status.value = 'needAuth'
+        return
+      }
       status.value = 'error'
       error.value = e instanceof Error ? e.message : 'Не удалось синхронизировать данные с Google Drive'
     }
@@ -200,10 +201,13 @@ export const useSync = defineStore('sync', () => {
       if (document.visibilityState === 'visible') syncNow('visible')
     })
 
-    // Токен истекает через час. Без этой проверки истечение заметили бы только при
-    // следующем действии пользователя — а так модалка продления появится сама.
-    setInterval(() => {
-      if (auth.signedIn && status.value !== 'syncing' && !hasValidToken()) {
+    // Access-токен истекает через час — раз в минуту тихо продлеваем его заранее по куке.
+    // Модалка входа появится, только если продление невозможно (refresh-токен умер).
+    setInterval(async () => {
+      if (!auth.signedIn || status.value === 'syncing' || hasValidToken()) return
+      try {
+        await auth.getToken()
+      } catch {
         status.value = 'needAuth'
       }
     }, 60_000)

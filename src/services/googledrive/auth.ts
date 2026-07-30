@@ -1,5 +1,10 @@
-// Авторизация в Google через vue3-google-login (обёртка над Google Identity Services).
-// Здесь только получение access-токена; работа с файлами Drive — в drive.ts.
+// Авторизация в Google по схеме authorization code flow.
+//
+// Раньше access-токен получался прямо в браузере (token flow) и лежал в localStorage —
+// его мог прочитать любой JS на странице, а продление требовало попапа раз в час.
+// Теперь: GIS-попап отдаёт одноразовый код -> наш Cloudflare Worker (/auth/exchange)
+// меняет его на токены; refresh-токен остаётся в httpOnly-куке (JS его не видит),
+// а access-токен живёт ТОЛЬКО в памяти этой вкладки и продлевается тихо через /auth/refresh.
 
 import { googleSdkLoaded } from "vue3-google-login";
 import { GOOGLE_CLIENT_ID } from "../../config";
@@ -7,74 +12,91 @@ import { GOOGLE_CLIENT_ID } from "../../config";
 const SCOPE =
   "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
 
-// Ключ localStorage для персистентного кэша токена — переживает перезагрузку страницы.
-const TOKEN_STORAGE_KEY = "bj-google-token";
+// Ключ старого хранилища токена — больше не используется, подчищаем за прошлой версией.
+localStorage.removeItem("bj-google-token");
 
-// Кэш токена в памяти модуля, при старте подгружается из localStorage.
+// Access-токен только в памяти модуля: переживает навигацию по SPA, но не перезагрузку
+// страницы — после неё тихо восстанавливается через /auth/refresh по httpOnly-куке.
 let cachedToken = "";
 let tokenExpiresAt = 0;
 
-try {
-  const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
-  if (raw) {
-    const saved = JSON.parse(raw) as {
-      token: string;
-      expiresAt: number;
-      scope?: string;
-    };
-    // Токен, выданный под другой набор разрешений (scope), не используем —
-    // иначе после расширения scope почта/профиль не подтянутся до истечения токена.
-    if (saved.scope === SCOPE) {
-      cachedToken = saved.token ?? "";
-      tokenExpiresAt = saved.expiresAt ?? 0;
-    }
+/** Бросается, когда тихо продлить сессию нельзя — нужен интерактивный вход кликом. */
+export class AuthRequiredError extends Error {
+  constructor() {
+    super("Нужен вход в Google");
+    this.name = "AuthRequiredError";
   }
-} catch {
-  // битые данные в localStorage — просто игнорируем, токен запросится заново
 }
 
-/** Сохраняет токен в localStorage, чтобы он пережил перезагрузку страницы. */
-function persistToken(token: string, expiresAt: number) {
-  localStorage.setItem(
-    TOKEN_STORAGE_KEY,
-    JSON.stringify({ token, expiresAt, scope: SCOPE }),
-  );
-}
-
-/** Есть ли сейчас валидный (не истёкший) токен в кэше. */
+/** Есть ли сейчас живой (не истёкший) access-токен в памяти. */
 export function hasValidToken(): boolean {
   return Boolean(cachedToken) && Date.now() < tokenExpiresAt - 60_000;
 }
 
-/** Возвращает access-токен: если он ещё живой (с запасом 60 сек) — без попапа, иначе спрашивает пользователя. */
-export function getAccessToken(): Promise<string> {
-  if (hasValidToken()) {
-    return Promise.resolve(cachedToken);
-  }
+function rememberToken(token: string, expiresInSec: number) {
+  cachedToken = token;
+  tokenExpiresAt = Date.now() + expiresInSec * 1000;
+}
 
+/** Запрос к нашему Worker. credentials: include — чтобы ездила httpOnly-кука. */
+async function authApi(path: string, body?: unknown): Promise<Response> {
+  return fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+/**
+ * Тихо возвращает access-токен: из памяти или через /auth/refresh по куке.
+ * Попапов не открывает никогда. Если продлить нечем — AuthRequiredError,
+ * дальше нужен interactiveSignIn() по клику пользователя.
+ */
+export async function getAccessToken(): Promise<string> {
+  if (hasValidToken()) return cachedToken;
+
+  const resp = await authApi("/auth/refresh").catch(() => null);
+  if (resp?.ok) {
+    const data = (await resp.json()) as { access_token: string; expires_in: number };
+    rememberToken(data.access_token, data.expires_in);
+    return cachedToken;
+  }
+  throw new AuthRequiredError();
+}
+
+/**
+ * Интерактивный вход (требует клика — иначе браузер заблокирует попап):
+ * GIS-попап выбора аккаунта -> одноразовый код -> обмен на токены в Worker.
+ */
+export function interactiveSignIn(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    // googleSdkLoaded сам подгружает скрипт GIS и зовёт колбэк, когда SDK готов
     googleSdkLoaded((google) => {
       google.accounts.oauth2
-        .initTokenClient({
+        .initCodeClient({
           client_id: GOOGLE_CLIENT_ID,
           scope: SCOPE,
-          callback: (resp) => {
-            if (!resp.access_token) {
+          ux_mode: "popup",
+          callback: async (resp: { code?: string }) => {
+            if (!resp.code) {
               reject(new Error("Не удалось получить доступ к Google Drive"));
               return;
             }
-            cachedToken = resp.access_token;
-            tokenExpiresAt =
-              Date.now() + Number(resp.expires_in ?? 3600) * 1000;
-            persistToken(cachedToken, tokenExpiresAt);
-            resolve(cachedToken);
+            try {
+              const r = await authApi("/auth/exchange", { code: resp.code });
+              if (!r.ok) throw new Error("Не удалось завершить вход");
+              const data = (await r.json()) as { access_token: string; expires_in: number };
+              rememberToken(data.access_token, data.expires_in);
+              resolve(cachedToken);
+            } catch (e) {
+              reject(e instanceof Error ? e : new Error("Не удалось завершить вход"));
+            }
           },
           error_callback: () => {
             reject(new Error("Авторизация в Google отменена"));
           },
         })
-        .requestAccessToken();
+        .requestCode();
     });
   });
 }
@@ -93,27 +115,11 @@ export async function fetchUserInfo(token: string): Promise<GoogleUserInfo> {
   return res.json();
 }
 
-/** Отзывает доступ у Google и полностью чистит локальный кэш токена. */
-export function revokeAccess(): Promise<void> {
-  const token = cachedToken;
-
-  const clear = () => {
-    cachedToken = "";
-    tokenExpiresAt = 0;
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-  };
-
-  if (!token) {
-    clear();
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve) => {
-    googleSdkLoaded((google) => {
-      google.accounts.oauth2.revoke(token, () => {
-        clear();
-        resolve();
-      });
-    });
+/** Выход: Worker отзывает refresh-токен у Google и стирает куку, память чистим сами. */
+export async function revokeAccess(): Promise<void> {
+  cachedToken = "";
+  tokenExpiresAt = 0;
+  await authApi("/auth/logout").catch(() => {
+    // сеть недоступна — локально всё равно вышли, кука истечёт сама
   });
 }

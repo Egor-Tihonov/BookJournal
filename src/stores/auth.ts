@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import {
   fetchUserInfo,
   getAccessToken,
+  interactiveSignIn,
   revokeAccess,
   type GoogleUserInfo,
 } from '../services/googledrive/auth'
@@ -21,19 +22,17 @@ function loadProfile(): GoogleUserInfo | null {
 }
 
 export const useAuth = defineStore('auth', () => {
-  // флаг «пользователь входил» живёт дольше самого токена — токен Google истекает
-  // через час, но при повторном запросе после уже данного согласия попап закрывается сам
+  // флаг «пользователь входил» живёт дольше access-токена: сам токен держится в памяти
+  // вкладки, а после перезагрузки тихо восстанавливается по httpOnly-куке с refresh-токеном
   const signedIn = ref(localStorage.getItem(SIGNED_IN_KEY) === '1')
   const busy = ref(false)
   const error = ref('')
   const profile = ref<GoogleUserInfo | null>(loadProfile())
 
-  /** Получить access-токен и по факту его получения пометить пользователя вошедшим. */
-  async function getToken(): Promise<string> {
-    const token = await getAccessToken()
+  /** Пометить пользователя вошедшим и дозапросить профиль, пока в нём нет почты. */
+  async function markSignedIn(token: string) {
     signedIn.value = true
     localStorage.setItem(SIGNED_IN_KEY, '1')
-    // Дозапрашиваем профиль, пока в нём нет почты (например, старый токен был без нужных прав).
     if (!profile.value?.email) {
       try {
         profile.value = await fetchUserInfo(token)
@@ -42,14 +41,23 @@ export const useAuth = defineStore('auth', () => {
         // профиль не критичен — без него просто не покажем почту
       }
     }
+  }
+
+  /** Тихо получить access-токен (память или refresh по куке). Попапов не открывает —
+      если сессии нет, бросает AuthRequiredError, тогда нужен signIn() по клику. */
+  async function getToken(): Promise<string> {
+    const token = await getAccessToken()
+    await markSignedIn(token)
     return token
   }
 
+  /** Интерактивный вход: GIS-попап -> код -> обмен на токены в Worker. Только по клику. */
   async function signIn() {
     error.value = ''
     busy.value = true
     try {
-      await getToken()
+      const token = await interactiveSignIn()
+      await markSignedIn(token)
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось войти в Google'
     } finally {

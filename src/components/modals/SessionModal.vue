@@ -3,9 +3,10 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuth } from '../../stores/auth'
 import { useSync } from '../../stores/sync'
 
-// Токен Google живёт час. Когда он истёк, синк ставит статус needAuth —
-// показываем модалку продления. Продлить можно только кликом пользователя
-// (Google не отдаёт токен без жеста), отказ или закрытие = выход из аккаунта.
+// Обычно сессия продлевается тихо по httpOnly-куке (см. services/googledrive/auth.ts).
+// Эта модалка — редкий запасной случай: refresh-токен умер (пользователь сменил пароль,
+// отозвал доступ, полгода не заходил). Продление = полноценный вход кликом,
+// отказ или закрытие = выход из аккаунта.
 const auth = useAuth()
 const sync = useSync()
 
@@ -26,15 +27,14 @@ watch(
 const renew = async () => {
   busy.value = true
   error.value = ''
-  try {
-    await auth.getToken()
-    open.value = false
-    sync.syncNow('renew')
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Не удалось продлить сессию'
-  } finally {
-    busy.value = false
+  await auth.signIn() // интерактивный вход: мы внутри обработчика клика, попап разрешён
+  busy.value = false
+  if (auth.error) {
+    error.value = auth.error
+    return
   }
+  open.value = false
+  sync.syncNow('renew')
 }
 
 const decline = async () => {
@@ -66,8 +66,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
             <button class="x" type="button" aria-label="Закрыть" @click="decline">×</button>
             <h3>Сессия истекла</h3>
             <div class="sub">
-              Google выдаёт доступ на час. Продлите сессию, чтобы синхронизация с Drive
-              продолжила работать, — или выйдите из аккаунта.
+              Google больше не принимает сохранённый вход — такое бывает после смены пароля
+              или отзыва доступа. Войдите заново, чтобы синхронизация с Drive продолжила
+              работать, — или выйдите из аккаунта.
             </div>
             <div class="foot" style="border: none">
               <div v-if="error" class="err">{{ error }}</div>

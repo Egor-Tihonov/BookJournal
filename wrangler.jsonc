@@ -1,9 +1,16 @@
 {
-  // Конфиг Cloudflare Worker: раздаёт собранную статику из dist.
+  // Конфиг Cloudflare Worker: серверные auth-эндпоинты + раздача статики из dist.
   "name": "book-journal",
   "compatibility_date": "2026-07-28",
+  // Серверная часть: /auth/* (обмен кода на токены, refresh, logout) — см. worker/auth.ts.
+  // Секрет GOOGLE_CLIENT_SECRET задаётся в дашборде воркера (Settings → Variables → Secret).
+  "main": "worker/auth.ts",
+  "vars": {
+    "GOOGLE_CLIENT_ID": "782838705901-n4mi50qjqum15bbu21jq59gko3rj61dn.apps.googleusercontent.com"
+  },
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     // Любой несуществующий путь получает index.html со статусом 200 —
     // прямые ссылки на роуты SPA работают без 404-костыля.
     "not_found_handling": "single-page-application"
