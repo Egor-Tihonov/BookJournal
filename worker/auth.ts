@@ -103,11 +103,9 @@ async function exchange(request: Request, env: Env): Promise<Response> {
     refresh_token?: string;
     expires_in?: number;
     error?: string;
-    error_description?: string;
   };
   if (!resp.ok || !data.access_token) {
-    // error_description отдаём как есть — это диагностика Google, секретов в ней нет
-    return json({ error: data.error ?? "exchange_failed", detail: data.error_description }, 401);
+    return json({ error: data.error ?? "exchange_failed" }, 401);
   }
 
   const headers: Record<string, string> = {};
@@ -134,18 +132,11 @@ async function refresh(request: Request, env: Env): Promise<Response> {
       grant_type: "refresh_token",
     }),
   });
-  const data = (await resp.json()) as {
-    access_token?: string;
-    expires_in?: number;
-    error?: string;
-    error_description?: string;
-  };
+  const data = (await resp.json()) as { access_token?: string; expires_in?: number; error?: string };
   if (!resp.ok || !data.access_token) {
     // Токен отозван или протух (сменили пароль, отозвали доступ) — чистим куку,
     // клиент покажет обычный вход.
-    return json({ error: data.error ?? "refresh_failed", detail: data.error_description }, 401, {
-      "set-cookie": clearCookie(),
-    });
+    return json({ error: data.error ?? "refresh_failed" }, 401, { "set-cookie": clearCookie() });
   }
   return json({ access_token: data.access_token, expires_in: data.expires_in ?? 3600 });
 }
