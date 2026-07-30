@@ -15,8 +15,8 @@ export const SYNC_MIN_PULL_INTERVAL_MS = 30_000;
 // Сколько дней хранить события удаления (надгробия) для слияния между устройствами
 export const TOMBSTONE_TTL_DAYS = 90;
 
-// Сколько книг показывает полка на главной и карусель «Читаю»
-export const SHELF_PAGE_SIZE = 6;
+// Сколько книг показывает полка на главной
+export const SHELF_PAGE_SIZE = 7;
 
 // Порция книг на странице «все книги статуса»
 export const SHELF_FULL_PAGE_SIZE = 12;
