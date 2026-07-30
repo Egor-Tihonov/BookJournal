@@ -50,7 +50,13 @@ export default {
     const url = new URL(request.url);
 
     if (!url.pathname.startsWith("/auth/")) {
-      return env.ASSETS.fetch(request); // всё остальное — статика приложения
+      // Статика приложения. COOP same-origin-allow-popups сохраняет связь страницы
+      // с попапом Google-входа (window.opener/postMessage): строгие значения COOP
+      // ломают GIS, отсутствие заголовка оставляет предупреждения в консоли.
+      const resp = await env.ASSETS.fetch(request);
+      const headers = new Headers(resp.headers);
+      headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+      return new Response(resp.body, { status: resp.status, headers });
     }
 
     if (request.method !== "POST") {
