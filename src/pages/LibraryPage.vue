@@ -247,11 +247,11 @@ const clearAll = async () => {
             </RouterLink>
           </div>
           <RouterLink
-            v-if="entry.shelf.total.value > 6"
+            v-if="entry.shelf.total.value > SHELF_PAGE_SIZE"
             class="bj-btn ghost more-btn"
             :to="`/library/shelf/${entry.status}`"
           >
-            Смотреть далее ({{ entry.shelf.total.value }})
+            Смотреть далее
           </RouterLink>
         </template>
       </template>
